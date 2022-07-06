@@ -41,13 +41,24 @@ namespace Client
                 }
                 catch (ArgumentNullException ane)
                 {
-
+                    Console.WriteLine("ArgumentNullException ; {0}", ane.ToString());
                 }
+
+                catch (SocketException se)
+                {
+                    Console.WriteLine("Socketxception : {0}", se.ToString());
+                }
+
+                catch (Exception e)
+                {
+                    Console.WriteLine("Unexpected exception : {0}", e.ToString());
+                }
+
                 
             }
             catch (Exception e)
             {
-
+                Console.WriteLine(e.ToString());
             }
 
 
