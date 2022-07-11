@@ -45,21 +45,22 @@ namespace Client
                         byte[] messageReceived = new byte[1024];
 
                         int byteRcvd = sender.Receive(messageReceived);
-                        //Console.WriteLine("Message from server -> {0}", Encoding.ASCII.GetString(messageReceived, 0, byteRcvd));
 
                         string encodingString = Encoding.ASCII.GetString(messageReceived, 0, byteRcvd);
                         string jasonCommand = JsonConvert.SerializeObject(encodingString);
                         
                         Console.WriteLine(jasonCommand);
-
-                        if (jasonCommand == "stop") {
-
+                        
+                        //Still need to figure out why it takes quotes from server command.
+                        if (jasonCommand == "\"stop\"") {
+                            sender.Shutdown(SocketShutdown.Both);
+                            sender.Close();
                             break;
                         }
+                        
 
                     } 
-                    sender.Shutdown(SocketShutdown.Both);
-                    sender.Close();
+
                 }
 
                 catch (ArgumentNullException ane)
