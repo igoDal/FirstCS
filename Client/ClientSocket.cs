@@ -8,7 +8,6 @@ namespace Client
 {
     class ClientSocket
     {
-        
         static void Main(string[] args)
         {
             ExecuteClient();
@@ -22,8 +21,6 @@ namespace Client
                 IPAddress ipAddress = ipHost.AddressList[0];
                 IPEndPoint localEndpoint = new IPEndPoint(ipAddress, 11111);
 
-                bool flag = true;
-
                 Socket sender = new Socket(ipAddress.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
 
                 try
@@ -33,11 +30,8 @@ namespace Client
 
                     while (true)
                     {
-
-
                         Console.Write("Enter a command: ");
-                        string command = null;
-                        command = Console.ReadLine();
+                        string command = Console.ReadLine();
 
                         byte[] messageSent = Encoding.ASCII.GetBytes(command);
                         int byteSent = sender.Send(messageSent);
@@ -46,21 +40,18 @@ namespace Client
 
                         int byteRcvd = sender.Receive(messageReceived);
 
+                        //Still need to figure out why it takes quotes from server command.
                         string encodingString = Encoding.ASCII.GetString(messageReceived, 0, byteRcvd);
                         string jasonCommand = JsonConvert.SerializeObject(encodingString);
                         
                         Console.WriteLine(jasonCommand);
                         
-                        //Still need to figure out why it takes quotes from server command.
                         if (jasonCommand == "\"stop\"") {
                             sender.Shutdown(SocketShutdown.Both);
                             sender.Close();
                             break;
                         }
-                        
-
                     } 
-
                 }
 
                 catch (ArgumentNullException ane)
@@ -77,16 +68,11 @@ namespace Client
                 {
                     Console.WriteLine("Unexpected exception : {0}", e.ToString());
                 }
-
-
-
             }
             catch (Exception e)
             {
                 Console.WriteLine(e.ToString());
             }
-
-
         }
     }
 }

@@ -14,7 +14,7 @@ namespace Server
 
         public static void ExecuteServer()
         {
-            string serverVersion = "0.0.1";
+            string serverVersion = "0.0.3";
             DateTime serverCreationDate = DateTime.Now;
 
             IPHostEntry ipHost = Dns.GetHostEntry(Dns.GetHostName());
@@ -43,7 +43,8 @@ namespace Server
                         data += Encoding.ASCII.GetString(bytes, 0, numByte);
                         Console.WriteLine("Text received -> {0}", data);
                         byte[] message;
-                        switch(data.ToLower())
+
+                        switch (data.ToLower())
                         {
                             case "help":
                                 message = Encoding.ASCII.GetBytes($"Available commands:" +
@@ -53,30 +54,32 @@ namespace Server
                                     $"'stop' - to stop the server");
                                 clientSocket.Send(message);
                                 break;
+
                             case "info":
-                                message = Encoding.ASCII.GetBytes($"Server version: {serverVersion}" +
-                                    $"Server Creation Date: {serverCreationDate}");
+                                message = Encoding.ASCII.GetBytes($"Server version: {serverVersion} " +
+                                    $"Server Creation Date: {serverCreationDate} ");
                                 clientSocket.Send(message);
                                 break;
+                            
                             case "uptime":
                                 DateTime serverCurrentDate = DateTime.Now;
                                 message = Encoding.ASCII.GetBytes($"Server is up for {serverCurrentDate - serverCreationDate}");
                                 clientSocket.Send(message);
                                 break;
+                            
                             case "stop":
                                 message = Encoding.ASCII.GetBytes("stop");
                                 clientSocket.Send(message);
                                 clientSocket.Shutdown(SocketShutdown.Both);
                                 clientSocket.Close();
-
                                 break;
+                            
                             default:
                                 message = Encoding.ASCII.GetBytes($"Incorrect command. Type 'help' to get list of commands.");
                                 clientSocket.Send(message);
                                 break;
                         }
                     }
-
                 }
             }
             catch (Exception ex)
