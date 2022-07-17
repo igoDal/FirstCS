@@ -7,6 +7,11 @@ namespace Server
 {
     class ServerSocket
     {
+        private static Socket clientSocket;
+        private static string serverVersion = "0.0.3";
+        private static DateTime serverCreationDate = DateTime.Now;
+
+
         static void Main(string[] args)
         {
             ExecuteServer();
@@ -14,8 +19,8 @@ namespace Server
 
         public static void ExecuteServer()
         {
-            string serverVersion = "0.0.3";
-            DateTime serverCreationDate = DateTime.Now;
+            
+            
 
             IPHostEntry ipHost = Dns.GetHostEntry(Dns.GetHostName());
             IPAddress ipAddress = ipHost.AddressList[0];
@@ -31,9 +36,10 @@ namespace Server
                 {
                     Console.WriteLine("Awaiting connection...");
 
-                    Socket clientSocket = listener.Accept();
+                    clientSocket = listener.Accept();
 
                     Console.WriteLine("Connected");
+
                     while (true)
                     {
                         byte[] bytes = new byte[1024];
@@ -47,36 +53,23 @@ namespace Server
                         switch (data.ToLower())
                         {
                             case "help":
-                                message = Encoding.ASCII.GetBytes($"Available commands:" +
-                                    $"'info' - to get info about server version, server creation date" +
-                                    $"'help' - to get a list of available commands with their description" +
-                                    $"'uptime' - to check server uptime" +
-                                    $"'stop' - to stop the server");
-                                clientSocket.Send(message);
+                                HelpCommand(data);
                                 break;
 
                             case "info":
-                                message = Encoding.ASCII.GetBytes($"Server version: {serverVersion} " +
-                                    $"Server Creation Date: {serverCreationDate} ");
-                                clientSocket.Send(message);
+                                infoCommand(data);
                                 break;
                             
                             case "uptime":
-                                DateTime serverCurrentDate = DateTime.Now;
-                                message = Encoding.ASCII.GetBytes($"Server is up for {serverCurrentDate - serverCreationDate}");
-                                clientSocket.Send(message);
+                                uptimeCommand(data);
                                 break;
                             
                             case "stop":
-                                message = Encoding.ASCII.GetBytes("stop");
-                                clientSocket.Send(message);
-                                clientSocket.Shutdown(SocketShutdown.Both);
-                                clientSocket.Close();
+                                stopCommand(data);
                                 break;
                             
                             default:
-                                message = Encoding.ASCII.GetBytes($"Incorrect command. Type 'help' to get list of commands.");
-                                clientSocket.Send(message);
+                                incorrectCommand(data); 
                                 break;
                         }
                     }
@@ -86,6 +79,45 @@ namespace Server
             {
                 Console.WriteLine(ex.ToString());
             }
+
+        }
+
+        private static void incorrectCommand(string data)
+        {
+            byte[] message = Encoding.ASCII.GetBytes($"Incorrect command. Type 'help' to get list of commands.");
+            clientSocket.Send(message);
+        }
+
+        private static void stopCommand(string data)
+        {
+            byte[] message = Encoding.ASCII.GetBytes("stop");
+            clientSocket.Send(message);
+            clientSocket.Shutdown(SocketShutdown.Both);
+            clientSocket.Close();
+        }
+
+        private static void uptimeCommand(string data)
+        {
+            DateTime serverCurrentDate = DateTime.Now;
+            byte[] message = Encoding.ASCII.GetBytes($"Server is up for {serverCurrentDate - serverCreationDate}");
+            clientSocket.Send(message);
+        }
+
+        private static void infoCommand(string data)
+        {
+            byte[] message = Encoding.ASCII.GetBytes($"Server version: {serverVersion}\n" +
+                                $"Server Creation Date: {serverCreationDate}");
+            clientSocket.Send(message);
+        }
+
+        public static void HelpCommand(string command)
+        {
+            byte[] message = Encoding.ASCII.GetBytes($"Available commands:\n" +
+                                $"'info' - to get info about server version, server creation date\n" +
+                                $"'help' - to get a list of available commands with their description\n" +
+                                $"'uptime' - to check server uptime\n" +
+                                $"'stop' - to stop the server\n");
+            clientSocket.Send(message);
         }
     }
 }

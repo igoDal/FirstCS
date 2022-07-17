@@ -33,36 +33,24 @@ namespace Client
 
                     while (true)
                     {
-                        Console.WriteLine("Enter username: ");
-                        string username = Console.ReadLine();
-                        Console.WriteLine("Enter password: ");
-                        string password = Console.ReadLine();
+                        Console.Write("Enter a command: ");
+                        string command = Console.ReadLine();
 
-                        if (File.Exists($"C:/Users/Igor/source/repos/igoDal/FirstCS{username}.txt") 
-                            && password.Equals(File.ReadAllText($"C:/Users/Igor/source/repos/igoDal/FirstCS{ username}.txt")))
+                        byte[] messageSent = Encoding.ASCII.GetBytes(command);
+                        int byteSent = sender.Send(messageSent);
+
+                        byte[] messageReceived = new byte[1024];
+
+                        int byteRcvd = sender.Receive(messageReceived);
+                        
+                        string encodingString = Encoding.ASCII.GetString(messageReceived, 0, byteRcvd);
+                        Console.WriteLine(encodingString);
+
+                        if (encodingString == "stop")
                         {
-                            Console.Write("Enter a command: ");
-                            string command = Console.ReadLine();
-
-                            byte[] messageSent = Encoding.ASCII.GetBytes(command);
-                            int byteSent = sender.Send(messageSent);
-
-                            byte[] messageReceived = new byte[1024];
-
-                            int byteRcvd = sender.Receive(messageReceived);
-
-                            //Still need to figure out why it takes quotes from server command.
-                            string encodingString = Encoding.ASCII.GetString(messageReceived, 0, byteRcvd);
-                            string jasonCommand = JsonConvert.SerializeObject(encodingString);
-
-                            Console.WriteLine(jasonCommand);
-
-                            if (jasonCommand == "\"stop\"")
-                            {
-                                sender.Shutdown(SocketShutdown.Both);
-                                sender.Close();
-                                break;
-                            }
+                            sender.Shutdown(SocketShutdown.Both);
+                            sender.Close();
+                            break;
                         }
                     }
                 }
