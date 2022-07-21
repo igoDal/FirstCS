@@ -2,14 +2,16 @@
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
+using System.Configuration;
+using System.Collections.Specialized;
 
 namespace Server
 {
     class ServerSocket
     {
         private static Socket clientSocket;
-        private static string serverVersion = "0.0.3";
-        private static DateTime serverCreationDate = DateTime.Now;
+        private readonly static string serverVersion = "0.0.3";
+        private readonly static DateTime serverCreationDate = DateTime.Now;
 
 
         static void Main(string[] args)
@@ -67,7 +69,19 @@ namespace Server
                             case "stop":
                                 stopCommand(data);
                                 break;
-                            
+
+                            case "logout":
+                                logout(data);
+                                break;
+
+                            case "add":
+                                addUser(data);
+                                break;
+
+                            case "delete":
+                                deleteUser(data);
+                                break;
+
                             default:
                                 incorrectCommand(data); 
                                 break;
@@ -80,6 +94,43 @@ namespace Server
                 Console.WriteLine(ex.ToString());
             }
 
+        }
+
+        private static void deleteUser(string data)
+        {
+            Console.WriteLine("Enter user (username) to delete: ");
+            //string username = Console.ReadLine();
+
+            string username = Console.ReadLine();
+            NameValueCollection users = ConfigurationManager.AppSettings;
+            foreach(string uuser in users.AllKeys)
+            {
+                if (uuser == username)
+                    ConfigurationManager.AppSettings.Remove(uuser);
+            }
+
+            byte[] message = Encoding.ASCII.GetBytes($"User {username} has been removed.");
+            clientSocket.Send(message);
+
+        }
+
+        private static void addUser(string data)
+        {
+            Console.WriteLine("Enter user (username) to delete: ");
+            //string username = Console.ReadLine();
+
+            string username = Console.ReadLine();
+            string password = Console.ReadLine();
+            ConfigurationManager.AppSettings.Add($"{username}", $"{password}");
+
+            byte[] message = Encoding.ASCII.GetBytes($"User {username} has been added.");
+            clientSocket.Send(message);
+        }
+
+        private static void logout(string data)
+        {
+            byte[] message = Encoding.ASCII.GetBytes("logout");
+            clientSocket.Send(message);
         }
 
         private static void incorrectCommand(string data)
@@ -103,7 +154,7 @@ namespace Server
             clientSocket.Send(message);
         }
 
-        private static void infoCommand(string data)
+        private static void infoCommand(string command)
         {
             byte[] message = Encoding.ASCII.GetBytes($"Server version: {serverVersion}\n" +
                                 $"Server Creation Date: {serverCreationDate}");

@@ -1,4 +1,6 @@
-﻿using System;
+﻿using System.Configuration;
+using System.Collections.Specialized;
+using System;
 using System.IO;
 using System.Net;
 using System.Net.Sockets;
@@ -9,6 +11,7 @@ namespace Client
 {
     class ClientSocket
     {
+        static string asd;
         static void Main(string[] args)
         {
             ExecuteClient();
@@ -18,6 +21,7 @@ namespace Client
         {
             try
             {
+                //For now don't know how to move it to config file.
                 IPHostEntry ipHost = Dns.GetHostEntry(Dns.GetHostName());
                 IPAddress ipAddress = ipHost.AddressList[0];
                 IPEndPoint localEndpoint = new IPEndPoint(ipAddress, 11111);
@@ -31,8 +35,22 @@ namespace Client
                     sender.Connect(localEndpoint);
                     Console.WriteLine("Socket connected to -> {0}", sender.RemoteEndPoint.ToString());
 
-                    while (true)
+                    Console.WriteLine("Podaj login: ");
+                    string username = Console.ReadLine();
+                    Console.WriteLine("Podaj hasło: ");
+                    string password = Console.ReadLine();
+
+                    Console.WriteLine($"Hello {username}");
+
+                    isLoggedIn = true;
+
+                    while (isLoggedIn)
                     {
+                        //Console.WriteLine("Podaj login: ");
+                        //string username = Console.ReadLine();
+                        //Console.WriteLine("Podaj hasło: ");
+                        //string password = Console.ReadLine();
+
                         Console.Write("Enter a command: ");
                         string command = Console.ReadLine();
 
@@ -42,9 +60,15 @@ namespace Client
                         byte[] messageReceived = new byte[1024];
 
                         int byteRcvd = sender.Receive(messageReceived);
-                        
+
                         string encodingString = Encoding.ASCII.GetString(messageReceived, 0, byteRcvd);
                         Console.WriteLine(encodingString);
+
+                        if(encodingString == "logout")
+                        {
+                            isLoggedIn = false;
+                            continue;
+                        }
 
                         if (encodingString == "stop")
                         {
