@@ -4,6 +4,7 @@ using System.Net.Sockets;
 using System.Text;
 using System.Configuration;
 using System.Collections.Specialized;
+using System.IO;
 
 namespace Server
 {
@@ -99,16 +100,9 @@ namespace Server
         private static void deleteUser(string data)
         {
             Console.WriteLine("Enter user (username) to delete: ");
-            //string username = Console.ReadLine();
-
             string username = Console.ReadLine();
-            NameValueCollection users = ConfigurationManager.AppSettings;
-            foreach(string uuser in users.AllKeys)
-            {
-                if (uuser == username)
-                    ConfigurationManager.AppSettings.Remove(uuser);
-            }
-
+            if (File.Exists($"{username}.json"))
+                File.Delete($"{username}.json");
             byte[] message = Encoding.ASCII.GetBytes($"User {username} has been removed.");
             clientSocket.Send(message);
 
@@ -116,12 +110,16 @@ namespace Server
 
         private static void addUser(string data)
         {
-            Console.WriteLine("Enter user (username) to delete: ");
-            //string username = Console.ReadLine();
-
+            Console.WriteLine("Enter user (username) to add:");
             string username = Console.ReadLine();
+            Console.WriteLine("Enter password:");
             string password = Console.ReadLine();
-            ConfigurationManager.AppSettings.Add($"{username}", $"{password}");
+            
+            using (var streamWriter = new StreamWriter($"{username}.json"))
+            {
+                streamWriter.WriteLine(username);
+                streamWriter.WriteLine(password);
+            }
 
             byte[] message = Encoding.ASCII.GetBytes($"User {username} has been added.");
             clientSocket.Send(message);
