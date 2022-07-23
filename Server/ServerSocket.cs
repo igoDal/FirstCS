@@ -114,18 +114,29 @@ namespace Server
             string username = Console.ReadLine();
             Console.WriteLine("Enter password:");
             string password = Console.ReadLine();
-            
-            using (var streamWriter = new StreamWriter($"{username}.json"))
+            byte[] message;
+
+            if (!File.Exists($"{username}.json"))
             {
-                streamWriter.WriteLine(username);
-                streamWriter.WriteLine(password);
+
+                using (var streamWriter = new StreamWriter($"{username}.json"))
+                {
+                    streamWriter.WriteLine(username);
+                    streamWriter.WriteLine(password);
+                }
+
+                message = Encoding.ASCII.GetBytes($"User {username} has been added.");
             }
 
-            byte[] message = Encoding.ASCII.GetBytes($"User {username} has been added.");
+            else
+            {
+                message = Encoding.ASCII.GetBytes($"User {username} already exists.");
+            }
+
             clientSocket.Send(message);
         }
 
-        private static void logout(string data)
+            private static void logout(string data)
         {
             byte[] message = Encoding.ASCII.GetBytes("logout");
             clientSocket.Send(message);

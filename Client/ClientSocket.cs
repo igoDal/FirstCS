@@ -11,7 +11,6 @@ namespace Client
 {
     class ClientSocket
     {
-        static string asd;
         static void Main(string[] args)
         {
             ExecuteClient();
@@ -46,10 +45,6 @@ namespace Client
 
                     while (isLoggedIn)
                     {
-                        //Console.WriteLine("Podaj login: ");
-                        //string username = Console.ReadLine();
-                        //Console.WriteLine("Podaj hasło: ");
-                        //string password = Console.ReadLine();
 
                         Console.Write("Enter a command: ");
                         string command = Console.ReadLine();
