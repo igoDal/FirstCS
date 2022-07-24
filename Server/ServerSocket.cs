@@ -13,6 +13,8 @@ namespace Server
         private static Socket clientSocket;
         private readonly static string serverVersion = "0.0.3";
         private readonly static DateTime serverCreationDate = DateTime.Now;
+        private static byte[] message;
+        private static readonly byte[] bytes = new byte[1024];
 
 
         static void Main(string[] args)
@@ -110,15 +112,25 @@ namespace Server
 
         private static void addUser(string data)
         {
-            Console.WriteLine("Enter user (username) to add:");
-            string username = Console.ReadLine();
-            Console.WriteLine("Enter password:");
-            string password = Console.ReadLine();
-            byte[] message;
+            //Console.WriteLine("Enter user (username) to add:");
+            //string username = Console.ReadLine();
+            //Console.WriteLine("Enter password:");
+            //string password = Console.ReadLine();
+            string username = null;
+            string password = null;
+            message = Encoding.ASCII.GetBytes($"Enter username:");
+            clientSocket.Send(message);
+
+            int numByte = clientSocket.Receive(bytes);
+            username = Encoding.ASCII.GetString(bytes, 0, numByte);
 
             if (!File.Exists($"{username}.json"))
             {
+                message = Encoding.ASCII.GetBytes($"Enter password:");
+                clientSocket.Send(message);
 
+                int numBytePassword = clientSocket.Receive(bytes);
+                password = Encoding.ASCII.GetString(bytes, 0, numBytePassword);
                 using (var streamWriter = new StreamWriter($"{username}.json"))
                 {
                     streamWriter.WriteLine(username);
@@ -173,6 +185,7 @@ namespace Server
         public static void HelpCommand(string command)
         {
             byte[] message = Encoding.ASCII.GetBytes($"Available commands:\n" +
+                                $"'add' - to add new user\n" +
                                 $"'info' - to get info about server version, server creation date\n" +
                                 $"'help' - to get a list of available commands with their description\n" +
                                 $"'uptime' - to check server uptime\n" +
