@@ -34,7 +34,22 @@ namespace Client
                 {
                     sender.Connect(localEndpoint);
                     Console.WriteLine("Socket connected to -> {0}", sender.RemoteEndPoint.ToString());
-                    //login();
+                    Console.WriteLine("Type '1' to login\n"+
+                        "Type '2' to create new user\n" +
+                        "Type anything else to quit");
+                    char choice = Console.ReadKey().KeyChar;
+                    if (choice == '1')
+                    {
+                        login();
+                    }
+                    else if (choice == '2')
+                    {
+                        addUser();
+                    }
+                    else
+                    {
+                        return;
+                    }
 
                     while (isLoggedIn)
                     {
@@ -96,55 +111,50 @@ namespace Client
             sender.Close();
         }
 
-        //private static void login()
-        //{
-        //    Console.WriteLine("Podaj login: ");
-        //    string username = Console.ReadLine();
+        private static void login()
+        {
+            string msg = "login";
 
-        //    Console.WriteLine("Podaj hasło: ");
-        //    string password = Console.ReadLine();
+            byte[] messageSentUsername = Encoding.ASCII.GetBytes(msg);
+            int byteSentUser = sender.Send(messageSentUsername);
 
-        //    if (File.Exists($"{username}.json"))
-        //    {
-        //        isLoggedIn = true;
-        //    }
-        //    else
-        //    {
-                
-        //        bool loopFlag = true;
-        //        while (loopFlag)
-        //        {
-        //            Console.WriteLine("User doesn't exist. Would you like to create this user?\n" +
-        //            "Type '1' to create new user\n" +
-        //            "Type '2' to abort");
-        //            char choice = Console.ReadKey().KeyChar;
+            byte[] messageReceivedUser = new byte[1024];
+            int byteRcvdUser = sender.Receive(messageReceivedUser);
+            string encodingString = Encoding.ASCII.GetString(messageReceivedUser, 0, byteRcvdUser);
+            Console.WriteLine(encodingString);
 
-        //            switch (choice)
-        //            {
-        //                case '1':
-        //                    addUser();
-        //                    break;
-        //                    loopFlag = false;
-        //                case '2':
-        //                    stop();
-        //                    loopFlag = false;
-        //                    break;
-        //                default:
-        //                    Console.WriteLine("Incorrect choice, try again.");
-        //                    break;
-        //            }
-        //            if (choice == '1' || choice == '2')
-        //                break;
-        //        }
+            string username = Console.ReadLine();
+            Console.WriteLine("uuuuuuuuuuuuuuuuuuuuuuu");
+            byte[] sendUsername = Encoding.ASCII.GetBytes(username);
+            sender.Send(sendUsername);
+            byte[] receivePasswordRequestIGuess = new byte[1024];
+            int passwordRequestReceived = sender.Receive(receivePasswordRequestIGuess);
 
-        //    }
-        //}
+            string encodingStringPasswordRequest = Encoding.ASCII.GetString(receivePasswordRequestIGuess, 0, passwordRequestReceived);
+            Console.WriteLine(encodingStringPasswordRequest);
+            string password = Console.ReadLine();
+            Console.WriteLine("pppppppppppppppppppppppp");
+            byte[] sendPassword = Encoding.ASCII.GetBytes(password);
+            sender.Send(sendPassword);
+            byte[] receiveLoginAnswerIGuess = new byte[1024];
+            int loginAnswerReceived = sender.Receive(receivePasswordRequestIGuess);
+
+            string encodingLoginAnswer = Encoding.ASCII.GetString(receiveLoginAnswerIGuess, 0, loginAnswerReceived);
+            Console.WriteLine(encodingLoginAnswer);
+            Console.WriteLine(encodingLoginAnswer);
+            Console.WriteLine("a");
+
+
+            if (encodingLoginAnswer == "loggedIn")
+                isLoggedIn = true;
+
+        }
 
         private static void addUser()
         {
             while (true)
             {
-
+                Console.WriteLine("\nEnter username to add: ");
                 string username = Console.ReadLine();
 
                 byte[] messageSentUsername = Encoding.ASCII.GetBytes(username);

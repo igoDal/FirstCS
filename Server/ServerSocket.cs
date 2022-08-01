@@ -5,6 +5,7 @@ using System.Text;
 using System.Configuration;
 using System.Collections.Specialized;
 using System.IO;
+using Newtonsoft.Json;
 
 namespace Server
 {
@@ -15,6 +16,10 @@ namespace Server
         private readonly static DateTime serverCreationDate = DateTime.Now;
         private static byte[] message;
         private static readonly byte[] bytes = new byte[1024];
+        private static readonly byte[] bytesU = new byte[1024];
+        private static readonly byte[] bytesP = new byte[1024];
+        private static bool loggedIn = false;
+        private static byte[] msg;
 
 
         static void Main(string[] args)
@@ -45,6 +50,23 @@ namespace Server
 
                     Console.WriteLine("Connected");
 
+                    byte[] firstBytes = new byte[1024];
+                    string firstData = null;
+
+                    int firstNumByte = clientSocket.Receive(firstBytes);
+                    firstData += Encoding.ASCII.GetString(firstBytes, 0, firstNumByte);
+
+                    if (firstData.ToLower() == "login")
+                    {
+                        login();
+                    }
+                    else if (firstData.ToLower() == "add")
+                    {
+                        addUser();
+                    }
+                    else
+                        break;
+
                     while (true)
                     {
                         byte[] bytes = new byte[1024];
@@ -58,7 +80,7 @@ namespace Server
                         switch (data.ToLower())
                         {
                             case "help":
-                                HelpCommand(data);
+                                helpCommand(data);
                                 break;
 
                             case "info":
@@ -75,10 +97,6 @@ namespace Server
 
                             case "logout":
                                 logout(data);
-                                break;
-
-                            case "add":
-                                addUser(data);
                                 break;
 
                             case "delete":
@@ -99,6 +117,49 @@ namespace Server
 
         }
 
+        private static void login()
+        {
+            message = Encoding.ASCII.GetBytes($"Enter username:");
+            clientSocket.Send(message);
+
+            string username;
+            string password;
+            int numByte = clientSocket.Receive(bytesU);
+            username = Encoding.ASCII.GetString(bytesU, 0, numByte);
+
+            if (File.Exists($"{username}.txt"))
+            {
+                message = Encoding.ASCII.GetBytes($"Enter password:");
+                clientSocket.Send(message);
+                string line;
+                int numBytePassword = clientSocket.Receive(bytesP);
+                password = Encoding.ASCII.GetString(bytesP, 0, numBytePassword);
+                using (StreamReader streamReader = new StreamReader($"{username}.txt"))
+                {
+                    line = streamReader.ReadLine();
+                    if (line.Equals(password))
+                    {
+                        loggedIn = true;
+                        msg = Encoding.ASCII.GetBytes($"loggedIn");
+                        //clientSocket.Send(message);
+                    }
+                    else
+                    {
+                        message = Encoding.ASCII.GetBytes($"loggedIn");
+                        clientSocket.Send(message);
+                    }
+                }
+
+            }
+
+            else
+            {
+                message = Encoding.ASCII.GetBytes($"user doesn't exist.");
+            }
+
+            clientSocket.Send(msg);
+        }
+
         private static void deleteUser(string data)
         {
             Console.WriteLine("Enter user (username) to delete: ");
@@ -110,12 +171,8 @@ namespace Server
 
         }
 
-        private static void addUser(string data)
+        private static void addUser()
         {
-            //Console.WriteLine("Enter user (username) to add:");
-            //string username = Console.ReadLine();
-            //Console.WriteLine("Enter password:");
-            //string password = Console.ReadLine();
             string username = null;
             string password = null;
             message = Encoding.ASCII.GetBytes($"Enter username:");
@@ -133,8 +190,9 @@ namespace Server
                 password = Encoding.ASCII.GetString(bytes, 0, numBytePassword);
                 using (var streamWriter = new StreamWriter($"{username}.json"))
                 {
-                    streamWriter.WriteLine(username);
-                    streamWriter.WriteLine(password);
+                    streamWriter.WriteLine($"Userame: {username}");
+                    streamWriter.WriteLine($"Password: {password}");
+                    streamWriter.WriteLine($"Role: user");
                 }
 
                 message = Encoding.ASCII.GetBytes($"User {username} has been added.");
@@ -182,7 +240,7 @@ namespace Server
             clientSocket.Send(message);
         }
 
-        public static void HelpCommand(string command)
+        private static void helpCommand(string command)
         {
             byte[] message = Encoding.ASCII.GetBytes($"Available commands:\n" +
                                 $"'add' - to add new user\n" +
