@@ -69,13 +69,15 @@ namespace Server
 
                     while (true)
                     {
+                        msg = Encoding.ASCII.GetBytes($"Enter command:");
+                        clientSocket.Send(msg);
+
                         byte[] bytes = new byte[1024];
                         string data = null;
 
                         int numByte = clientSocket.Receive(bytes);
                         data += Encoding.ASCII.GetString(bytes, 0, numByte);
                         Console.WriteLine("Text received -> {0}", data);
-                        byte[] message;
 
                         switch (data.ToLower())
                         {
@@ -137,17 +139,17 @@ namespace Server
                 using (StreamReader streamReader = new StreamReader($"{username}.txt"))
                 {
                     line = streamReader.ReadLine();
-                    if (line.Equals(password))
-                    {
-                        loggedIn = true;
-                        msg = Encoding.ASCII.GetBytes($"loggedIn");
-                        //clientSocket.Send(message);
-                    }
-                    else
-                    {
-                        message = Encoding.ASCII.GetBytes($"loggedIn");
-                        clientSocket.Send(message);
-                    }
+                }
+                if (line.Equals(password))
+                {
+                    loggedIn = true;
+                    msg = Encoding.ASCII.GetBytes($"loggedIn");
+                    clientSocket.Send(msg);
+                }
+                else
+                {
+                    message = Encoding.ASCII.GetBytes($"loggedIn");
+                    clientSocket.Send(message);
                 }
 
             }
@@ -155,9 +157,9 @@ namespace Server
             else
             {
                 message = Encoding.ASCII.GetBytes($"user doesn't exist.");
+                clientSocket.Send(msg);
             }
 
-            clientSocket.Send(msg);
         }
 
         private static void deleteUser(string data)

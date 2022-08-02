@@ -137,7 +137,7 @@ namespace Client
             byte[] sendPassword = Encoding.ASCII.GetBytes(password);
             sender.Send(sendPassword);
             byte[] receiveLoginAnswerIGuess = new byte[1024];
-            int loginAnswerReceived = sender.Receive(receivePasswordRequestIGuess);
+            int loginAnswerReceived = sender.Receive(receiveLoginAnswerIGuess);
 
             string encodingLoginAnswer = Encoding.ASCII.GetString(receiveLoginAnswerIGuess, 0, loginAnswerReceived);
             Console.WriteLine(encodingLoginAnswer);
