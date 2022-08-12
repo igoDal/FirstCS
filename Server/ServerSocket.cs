@@ -6,6 +6,7 @@ using System.Configuration;
 using System.Collections.Specialized;
 using System.IO;
 using Newtonsoft.Json;
+using System.Collections.Generic;
 
 namespace Server
 {
@@ -19,7 +20,6 @@ namespace Server
         private static readonly byte[] bytesU = new byte[1024];
         private static readonly byte[] bytesP = new byte[1024];
         private static bool loggedIn = false;
-        private static byte[] msg;
 
 
         static void Main(string[] args)
@@ -67,10 +67,10 @@ namespace Server
                     else
                         break;
 
-                    while (true)
+                    while (loggedIn)
                     {
-                        msg = Encoding.ASCII.GetBytes($"Enter command:");
-                        clientSocket.Send(msg);
+                        message = Encoding.ASCII.GetBytes($"Enter command:");
+                        clientSocket.Send(message);
 
                         byte[] bytes = new byte[1024];
                         string data = null;
@@ -82,31 +82,31 @@ namespace Server
                         switch (data.ToLower())
                         {
                             case "help":
-                                helpCommand(data);
+                                helpCommand();
                                 break;
 
                             case "info":
-                                infoCommand(data);
+                                infoCommand();
                                 break;
                             
                             case "uptime":
-                                uptimeCommand(data);
+                                uptimeCommand();
                                 break;
                             
                             case "stop":
-                                stopCommand(data);
+                                stopCommand();
                                 break;
 
                             case "logout":
-                                logout(data);
+                                logout();
                                 break;
 
                             case "delete":
-                                deleteUser(data);
+                                deleteUser();
                                 break;
 
                             default:
-                                incorrectCommand(data); 
+                                incorrectCommand(); 
                                 break;
                         }
                     }
@@ -143,59 +143,60 @@ namespace Server
                 if (line.Equals(password))
                 {
                     loggedIn = true;
-                    msg = Encoding.ASCII.GetBytes($"loggedIn");
-                    clientSocket.Send(msg);
-                }
-                else
-                {
                     message = Encoding.ASCII.GetBytes($"loggedIn");
                     clientSocket.Send(message);
                 }
-
+                else
+                {
+                    message = Encoding.ASCII.GetBytes($"Incorrect password!");
+                    clientSocket.Send(message);
+                }
             }
-
             else
             {
                 message = Encoding.ASCII.GetBytes($"user doesn't exist.");
-                clientSocket.Send(msg);
+                clientSocket.Send(message);
             }
-
-        }
-
-        private static void deleteUser(string data)
-        {
-            Console.WriteLine("Enter user (username) to delete: ");
-            string username = Console.ReadLine();
-            if (File.Exists($"{username}.json"))
-                File.Delete($"{username}.json");
-            byte[] message = Encoding.ASCII.GetBytes($"User {username} has been removed.");
-            clientSocket.Send(message);
-
         }
 
         private static void addUser()
         {
-            string username = null;
-            string password = null;
             message = Encoding.ASCII.GetBytes($"Enter username:");
             clientSocket.Send(message);
 
-            int numByte = clientSocket.Receive(bytes);
-            username = Encoding.ASCII.GetString(bytes, 0, numByte);
+            string username;
+            string password;
+            int numByte = clientSocket.Receive(bytesU);
+            username = Encoding.ASCII.GetString(bytesU, 0, numByte);
 
             if (!File.Exists($"{username}.json"))
             {
                 message = Encoding.ASCII.GetBytes($"Enter password:");
                 clientSocket.Send(message);
 
-                int numBytePassword = clientSocket.Receive(bytes);
-                password = Encoding.ASCII.GetString(bytes, 0, numBytePassword);
-                using (var streamWriter = new StreamWriter($"{username}.json"))
+                int numBytePassword = clientSocket.Receive(bytesP);
+                password = Encoding.ASCII.GetString(bytesP, 0, numBytePassword);
+
+                List<User> _user = new List<User>();
+                _user.Add(new User()
                 {
-                    streamWriter.WriteLine($"Userame: {username}");
-                    streamWriter.WriteLine($"Password: {password}");
-                    streamWriter.WriteLine($"Role: user");
+                    Userame = username,
+                    Password = password,
+                    Role = "user"
+                });
+
+                using (StreamWriter file = File.CreateText($"{username}.txt"))
+                {
+                    JsonSerializer serializer = new JsonSerializer();
+                    serializer.Serialize(file, _user);
                 }
+
+                //using (var streamWriter = new StreamWriter($"{username}.json"))
+                //{
+                //    streamWriter.WriteLine($"Userame: {username}");
+                //    streamWriter.WriteLine($"Password: {password}");
+                //    streamWriter.WriteLine($"Role: user");
+                //}
 
                 message = Encoding.ASCII.GetBytes($"User {username} has been added.");
             }
@@ -207,20 +208,30 @@ namespace Server
 
             clientSocket.Send(message);
         }
+        private static void deleteUser()
+        {
+            Console.WriteLine("Enter user (username) to delete: ");
+            string username = Console.ReadLine();
+            if (File.Exists($"{username}.txt"))
+                File.Delete($"{username}.txt");
+            byte[] message = Encoding.ASCII.GetBytes($"User {username} has been removed.");
+            clientSocket.Send(message);
 
-            private static void logout(string data)
+        }
+
+            private static void logout()
         {
             byte[] message = Encoding.ASCII.GetBytes("logout");
             clientSocket.Send(message);
         }
 
-        private static void incorrectCommand(string data)
+        private static void incorrectCommand()
         {
             byte[] message = Encoding.ASCII.GetBytes($"Incorrect command. Type 'help' to get list of commands.");
             clientSocket.Send(message);
         }
 
-        private static void stopCommand(string data)
+        private static void stopCommand()
         {
             byte[] message = Encoding.ASCII.GetBytes("stop");
             clientSocket.Send(message);
@@ -228,21 +239,21 @@ namespace Server
             clientSocket.Close();
         }
 
-        private static void uptimeCommand(string data)
+        private static void uptimeCommand()
         {
             DateTime serverCurrentDate = DateTime.Now;
             byte[] message = Encoding.ASCII.GetBytes($"Server is up for {serverCurrentDate - serverCreationDate}");
             clientSocket.Send(message);
         }
 
-        private static void infoCommand(string command)
+        private static void infoCommand()
         {
             byte[] message = Encoding.ASCII.GetBytes($"Server version: {serverVersion}\n" +
                                 $"Server Creation Date: {serverCreationDate}");
             clientSocket.Send(message);
         }
 
-        private static void helpCommand(string command)
+        private static void helpCommand()
         {
             byte[] message = Encoding.ASCII.GetBytes($"Available commands:\n" +
                                 $"'add' - to add new user\n" +
