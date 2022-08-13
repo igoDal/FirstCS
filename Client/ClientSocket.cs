@@ -121,27 +121,16 @@ namespace Client
             Console.WriteLine();
             string msg = "login";
 
-            byte[] messageSentUsername = Encoding.ASCII.GetBytes(msg);
-            sender.Send(messageSentUsername);
-
-            byte[] messageReceivedUser = new byte[1024];
-            int byteRcvdUser = sender.Receive(messageReceivedUser);
-            string encodingString = Encoding.ASCII.GetString(messageReceivedUser, 0, byteRcvdUser);
-            Console.WriteLine(encodingString);
+            usernameRequest(msg);
 
             string username = Console.ReadLine();
 
-            byte[] sendUsername = Encoding.ASCII.GetBytes(username);
-            sender.Send(sendUsername);
-            byte[] receivePasswordRequestIGuess = new byte[1024];
-            int passwordRequestReceived = sender.Receive(receivePasswordRequestIGuess);
+            enterUsername(username);
+            passwordRequest();
 
-            string encodingStringPasswordRequest = Encoding.ASCII.GetString(receivePasswordRequestIGuess, 0, passwordRequestReceived);
-            Console.WriteLine(encodingStringPasswordRequest);
             string password = Console.ReadLine();
 
-            byte[] sendPassword = Encoding.ASCII.GetBytes(password);
-            sender.Send(sendPassword);
+            enterPassword(password);
             byte[] receiveLoginAnswerIGuess = new byte[1024];
             int loginAnswerReceived = sender.Receive(receiveLoginAnswerIGuess);
 
@@ -163,26 +152,14 @@ namespace Client
             Console.WriteLine();
             string msg = "add";
 
-            byte[] usernameSent = Encoding.ASCII.GetBytes(msg);
-            sender.Send(usernameSent);
-
-            byte[] messageReceivedUser = new byte[1024];
-            int byteRcvdUser = sender.Receive(messageReceivedUser);
-            string encodingString = Encoding.ASCII.GetString(messageReceivedUser, 0, byteRcvdUser);
-            Console.WriteLine(encodingString);
+            usernameRequest(msg);
 
             string username = Console.ReadLine();
-            byte[] sendUsername = Encoding.ASCII.GetBytes(username);
-            sender.Send(sendUsername);
-            byte[] receivePasswordRequestIGuess = new byte[1024];
-            int passwordRequestReceived = sender.Receive(receivePasswordRequestIGuess);
-
-            string encodingStringPasswordRequest = Encoding.ASCII.GetString(receivePasswordRequestIGuess, 0, passwordRequestReceived);
-            Console.WriteLine(encodingStringPasswordRequest);
+            enterUsername(username);
+            passwordRequest();
 
             string password = Console.ReadLine();
-            byte[] messageSentPass = Encoding.ASCII.GetBytes(password);
-            sender.Send(messageSentPass);
+            enterPassword(password);
 
             byte[] messageReceivedPass = new byte[1024];
 
@@ -191,6 +168,36 @@ namespace Client
             string encodingStringpass = Encoding.ASCII.GetString(messageReceivedPass, 0, byteRcvdPass);
             Console.WriteLine(encodingStringpass);
 
+        }
+
+        private static void usernameRequest(string command)
+        {
+            byte[] messageSentUsername = Encoding.ASCII.GetBytes(command);
+            sender.Send(messageSentUsername);
+            byte[] messageReceivedUser = new byte[1024];
+            int byteRcvdUser = sender.Receive(messageReceivedUser);
+            string encodingString = Encoding.ASCII.GetString(messageReceivedUser, 0, byteRcvdUser);
+            Console.WriteLine(encodingString);
+        }
+
+        private static void enterUsername(string username)
+        {
+            byte[] sendUsername = Encoding.ASCII.GetBytes(username);
+            sender.Send(sendUsername);
+        }
+
+        private static void passwordRequest()
+        {
+            byte[] receivePasswordRequestIGuess = new byte[1024];
+            int passwordRequestReceived = sender.Receive(receivePasswordRequestIGuess);
+            string encodingStringPasswordRequest = Encoding.ASCII.GetString(receivePasswordRequestIGuess, 0, passwordRequestReceived);
+            Console.WriteLine(encodingStringPasswordRequest);
+        }
+
+        private static void enterPassword(string password)
+        {
+            byte[] sendPassword = Encoding.ASCII.GetBytes(password);
+            sender.Send(sendPassword);
         }
     }
 }
