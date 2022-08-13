@@ -190,14 +190,6 @@ namespace Server
                     JsonSerializer serializer = new JsonSerializer();
                     serializer.Serialize(file, _user);
                 }
-
-                //using (var streamWriter = new StreamWriter($"{username}.json"))
-                //{
-                //    streamWriter.WriteLine($"Userame: {username}");
-                //    streamWriter.WriteLine($"Password: {password}");
-                //    streamWriter.WriteLine($"Role: user");
-                //}
-
                 message = Encoding.ASCII.GetBytes($"User {username} has been added.");
             }
 
