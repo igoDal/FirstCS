@@ -7,6 +7,8 @@ using System.Collections.Specialized;
 using System.IO;
 using Newtonsoft.Json;
 using System.Collections.Generic;
+using Newtonsoft.Json.Linq;
+using System.Linq;
 
 namespace Server
 {
@@ -29,9 +31,6 @@ namespace Server
 
         public static void ExecuteServer()
         {
-            
-            
-
             IPHostEntry ipHost = Dns.GetHostEntry(Dns.GetHostName());
             IPAddress ipAddress = ipHost.AddressList[0];
             IPEndPoint localEndPoint = new IPEndPoint(ipAddress, 11111);
@@ -129,16 +128,22 @@ namespace Server
             int numByte = clientSocket.Receive(bytesU);
             username = Encoding.ASCII.GetString(bytesU, 0, numByte);
 
-            if (File.Exists($"{username}.txt"))
+            if (File.Exists($"{username}.json"))
             {
                 message = Encoding.ASCII.GetBytes($"Enter password:");
                 clientSocket.Send(message);
                 string line;
                 int numBytePassword = clientSocket.Receive(bytesP);
                 password = Encoding.ASCII.GetString(bytesP, 0, numBytePassword);
-                using (StreamReader streamReader = new StreamReader($"{username}.txt"))
+                using (StreamReader streamReader = new StreamReader($"{username}.json"))
                 {
                     line = streamReader.ReadLine();
+                    var result = JObject.Parse(line)
+                        .DescendantsAndSelf()
+                        .OfType<JProperty>()
+                        .Single(x=>x.Name == "Password")
+                        .Value;
+                    Console.WriteLine(result);
                 }
                 if (line.Equals(password))
                 {
@@ -185,7 +190,7 @@ namespace Server
                     Role = "user"
                 });
 
-                using (StreamWriter file = File.CreateText($"{username}.txt"))
+                using (StreamWriter file = File.CreateText($"{username}.json"))
                 {
                     JsonSerializer serializer = new JsonSerializer();
                     serializer.Serialize(file, _user);

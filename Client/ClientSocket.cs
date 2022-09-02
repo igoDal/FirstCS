@@ -23,7 +23,7 @@ namespace Client
         {
             try
             {
-                //For now don't know how to move it to config file.
+                //For now I don't know how to move it to config file.
                 IPHostEntry ipHost = Dns.GetHostEntry(Dns.GetHostName());
                 IPAddress ipAddress = ipHost.AddressList[0];
                 IPEndPoint localEndpoint = new IPEndPoint(ipAddress, 11111);
@@ -131,10 +131,10 @@ namespace Client
             string password = Console.ReadLine();
 
             enterPassword(password);
-            byte[] receiveLoginAnswerIGuess = new byte[1024];
-            int loginAnswerReceived = sender.Receive(receiveLoginAnswerIGuess);
+            byte[] receiveLoginAnswer = new byte[1024];
+            int loginAnswerReceived = sender.Receive(receiveLoginAnswer);
 
-            string encodingLoginAnswer = Encoding.ASCII.GetString(receiveLoginAnswerIGuess, 0, loginAnswerReceived);
+            string encodingLoginAnswer = Encoding.ASCII.GetString(receiveLoginAnswer, 0, loginAnswerReceived);
 
             if (encodingLoginAnswer == "loggedIn") 
             {
@@ -188,9 +188,9 @@ namespace Client
 
         private static void passwordRequest()
         {
-            byte[] receivePasswordRequestIGuess = new byte[1024];
-            int passwordRequestReceived = sender.Receive(receivePasswordRequestIGuess);
-            string encodingStringPasswordRequest = Encoding.ASCII.GetString(receivePasswordRequestIGuess, 0, passwordRequestReceived);
+            byte[] receivePasswordRequest = new byte[1024];
+            int passwordRequestReceived = sender.Receive(receivePasswordRequest);
+            string encodingStringPasswordRequest = Encoding.ASCII.GetString(receivePasswordRequest, 0, passwordRequestReceived);
             Console.WriteLine(encodingStringPasswordRequest);
         }
 
