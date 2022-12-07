@@ -132,20 +132,16 @@ namespace Server
             {
                 message = Encoding.ASCII.GetBytes($"Enter password:");
                 clientSocket.Send(message);
-                string line;
+                JsonReader line;
                 int numBytePassword = clientSocket.Receive(bytesP);
                 password = Encoding.ASCII.GetString(bytesP, 0, numBytePassword);
-                using (StreamReader streamReader = new StreamReader($"{username}.json"))
-                {
-                    line = streamReader.ReadLine();
-                    var result = JObject.Parse(line)
-                        .DescendantsAndSelf()
-                        .OfType<JProperty>()
-                        .Single(x=>x.Name == "Password")
-                        .Value;
-                    Console.WriteLine(result);
-                }
-                if (line.Equals(password))
+                
+                var json = $"{username}.json";
+                var data = (JObject)JsonConvert.DeserializeObject(json);
+                string getPassword = data["Password"].Value<string>();
+
+                Console.WriteLine(getPassword);
+                if (getPassword.Equals(password))
                 {
                     loggedIn = true;
                     message = Encoding.ASCII.GetBytes($"loggedIn");
