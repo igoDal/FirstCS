@@ -127,18 +127,20 @@ namespace Server
             string password;
             int numByte = clientSocket.Receive(bytesU);
             username = Encoding.ASCII.GetString(bytesU, 0, numByte);
+            var file = $"{username}.json";
+            var fileRead = File.ReadAllText(file);
 
-            if (File.Exists($"{username}.json"))
+            if (File.Exists(file))
             {
                 message = Encoding.ASCII.GetBytes($"Enter password:");
                 clientSocket.Send(message);
                 JsonReader line;
                 int numBytePassword = clientSocket.Receive(bytesP);
                 password = Encoding.ASCII.GetString(bytesP, 0, numBytePassword);
-                
-                var json = $"{username}.json";
-                var data = (JObject)JsonConvert.DeserializeObject(json);
-                string getPassword = data["Password"].Value<string>();
+
+                //Test for User deserialization
+                var singleUserData = JsonConvert.DeserializeObject<User>(fileRead);
+                string getPassword = singleUserData.Password;
 
                 Console.WriteLine(getPassword);
                 if (getPassword.Equals(password))
@@ -178,18 +180,17 @@ namespace Server
                 int numBytePassword = clientSocket.Receive(bytesP);
                 password = Encoding.ASCII.GetString(bytesP, 0, numBytePassword);
 
-                List<User> _user = new List<User>();
-                _user.Add(new User()
+                User user = new User()
                 {
                     Userame = username,
                     Password = password,
                     Role = "user"
-                });
+                };
 
                 using (StreamWriter file = File.CreateText($"{username}.json"))
                 {
                     JsonSerializer serializer = new JsonSerializer();
-                    serializer.Serialize(file, _user);
+                    serializer.Serialize(file, user);
                 }
                 message = Encoding.ASCII.GetBytes($"User {username} has been added.");
             }
