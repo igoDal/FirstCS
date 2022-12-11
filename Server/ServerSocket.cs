@@ -7,6 +7,8 @@ using System.Collections.Specialized;
 using System.IO;
 using Newtonsoft.Json;
 using System.Collections.Generic;
+using Newtonsoft.Json.Linq;
+using System.Linq;
 
 namespace Server
 {
@@ -21,22 +23,17 @@ namespace Server
         private static readonly byte[] bytesP = new byte[1024];
         private static bool loggedIn = false;
 
-
         static void Main(string[] args)
         {
             ExecuteServer();
         }
-
         public static void ExecuteServer()
         {
-            
-            
-
             IPHostEntry ipHost = Dns.GetHostEntry(Dns.GetHostName());
             IPAddress ipAddress = ipHost.AddressList[0];
             IPEndPoint localEndPoint = new IPEndPoint(ipAddress, 11111);
-
             Socket listener = new Socket(ipAddress.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
+
             try
             {
                 listener.Bind(localEndPoint);
@@ -48,28 +45,31 @@ namespace Server
 
                     clientSocket = listener.Accept();
 
-                    Console.WriteLine("Connected");
-
-                    byte[] firstBytes = new byte[1024];
-                    string firstData = null;
-
-                    int firstNumByte = clientSocket.Receive(firstBytes);
-                    firstData += Encoding.ASCII.GetString(firstBytes, 0, firstNumByte);
-
-                    if (firstData.ToLower() == "login")
+                    while (!loggedIn)
                     {
-                        login();
+                        Console.WriteLine("Connected");
+
+                        byte[] firstBytes = new byte[1024];
+                        string firstData = null;
+
+                        int firstNumByte = clientSocket.Receive(firstBytes);
+                        firstData += Encoding.ASCII.GetString(firstBytes, 0, firstNumByte);
+
+                        if (firstData.ToLower() == "login")
+                        {
+                            login();
+                        }
+                        else if (firstData.ToLower() == "add")
+                        {
+                            addUser();
+                        }
+                        else
+                            break;
                     }
-                    else if (firstData.ToLower() == "add")
-                    {
-                        addUser();
-                    }
-                    else
-                        break;
 
                     while (loggedIn)
                     {
-                        message = Encoding.ASCII.GetBytes($"Enter command:");
+                        message = Encoding.ASCII.GetBytes($"Enter command (type \"help\" to check available commands): ");
                         clientSocket.Send(message);
 
                         byte[] bytes = new byte[1024];
@@ -81,6 +81,9 @@ namespace Server
 
                         switch (data.ToLower())
                         {
+                            case "add":
+                                addUser();
+                                break;
                             case "help":
                                 helpCommand();
                                 break;
@@ -116,7 +119,6 @@ namespace Server
             {
                 Console.WriteLine(ex.ToString());
             }
-
         }
 
         private static void login()
@@ -128,19 +130,22 @@ namespace Server
             string password;
             int numByte = clientSocket.Receive(bytesU);
             username = Encoding.ASCII.GetString(bytesU, 0, numByte);
+            var file = $"{username}.json";
 
-            if (File.Exists($"{username}.txt"))
+            if (File.Exists(file))
             {
+                var fileRead = File.ReadAllText(file);
                 message = Encoding.ASCII.GetBytes($"Enter password:");
                 clientSocket.Send(message);
-                string line;
+                JsonReader line;
                 int numBytePassword = clientSocket.Receive(bytesP);
                 password = Encoding.ASCII.GetString(bytesP, 0, numBytePassword);
-                using (StreamReader streamReader = new StreamReader($"{username}.txt"))
-                {
-                    line = streamReader.ReadLine();
-                }
-                if (line.Equals(password))
+
+                var singleUserData = JsonConvert.DeserializeObject<User>(fileRead);
+                string getPassword = singleUserData.Password;
+
+                Console.WriteLine(getPassword);
+                if (getPassword.Equals(password))
                 {
                     loggedIn = true;
                     message = Encoding.ASCII.GetBytes($"loggedIn");
@@ -158,7 +163,6 @@ namespace Server
                 clientSocket.Send(message);
             }
         }
-
         private static void addUser()
         {
             message = Encoding.ASCII.GetBytes($"Enter username:");
@@ -177,18 +181,17 @@ namespace Server
                 int numBytePassword = clientSocket.Receive(bytesP);
                 password = Encoding.ASCII.GetString(bytesP, 0, numBytePassword);
 
-                List<User> _user = new List<User>();
-                _user.Add(new User()
+                User user = new User()
                 {
                     Userame = username,
                     Password = password,
                     Role = "user"
-                });
+                };
 
-                using (StreamWriter file = File.CreateText($"{username}.txt"))
+                using (StreamWriter file = File.CreateText($"{username}.json"))
                 {
                     JsonSerializer serializer = new JsonSerializer();
-                    serializer.Serialize(file, _user);
+                    serializer.Serialize(file, user);
                 }
                 message = Encoding.ASCII.GetBytes($"User {username} has been added.");
             }
@@ -197,7 +200,6 @@ namespace Server
             {
                 message = Encoding.ASCII.GetBytes($"User {username} already exists.");
             }
-
             clientSocket.Send(message);
         }
         private static void deleteUser()
@@ -208,7 +210,6 @@ namespace Server
                 File.Delete($"{username}.txt");
             byte[] message = Encoding.ASCII.GetBytes($"User {username} has been removed.");
             clientSocket.Send(message);
-
         }
 
             private static void logout()

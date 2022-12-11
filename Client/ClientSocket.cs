@@ -14,6 +14,7 @@ namespace Client
         private static bool isLoggedIn = false;
         private static bool isOnline = false;
         private static Socket sender;
+        private static bool notLoggedInFlag = false;
         static void Main(string[] args)
         {
             ExecuteClient();
@@ -23,7 +24,7 @@ namespace Client
         {
             try
             {
-                //For now don't know how to move it to config file.
+                //For now I don't know how to move it to config file.
                 IPHostEntry ipHost = Dns.GetHostEntry(Dns.GetHostName());
                 IPAddress ipAddress = ipHost.AddressList[0];
                 IPEndPoint localEndpoint = new IPEndPoint(ipAddress, 11111);
@@ -34,58 +35,47 @@ namespace Client
                 {
                     sender.Connect(localEndpoint);
                     Console.WriteLine("Socket connected to -> {0}", sender.RemoteEndPoint.ToString());
-                    Console.WriteLine("Type '1' to login\n"+
-                        "Type '2' to create new user\n" +
-                        "Type anything else to quit");
-                    char choice = Console.ReadKey().KeyChar;
-                    if (choice == '1')
+
+                    while (true)
                     {
-                        login();
-                    }
-                    else if (choice == '2')
-                    {
-                        addUser();
-                    }
-                    else
-                    {
-                        return;
-                    }
+                        Menu();
 
-                    while (isLoggedIn)
-                    {
-                        byte[] initialCommand = new byte[1024];
-
-                        int initComm = sender.Receive(initialCommand);
-
-                        string encodingInitComm = Encoding.ASCII.GetString(initialCommand, 0, initComm);
-                        Console.WriteLine(encodingInitComm);
-
-                        string command = Console.ReadLine();
-
-                        byte[] messageSent = Encoding.ASCII.GetBytes(command);
-                        int byteSent = sender.Send(messageSent);
-
-                        byte[] messageReceived = new byte[1024];
-
-                        int byteRcvd = sender.Receive(messageReceived);
-
-                        string encodingString = Encoding.ASCII.GetString(messageReceived, 0, byteRcvd);
-                        Console.WriteLine(encodingString);
-
-                        if (encodingString == "Enter username:")
+                        while (isLoggedIn)
                         {
-                            addUser();
-                        }
-                        if (encodingString == "logout")
-                        {
-                            isLoggedIn = false;
-                            continue;
-                        }
+                            byte[] initialCommand = new byte[1024];
 
-                        if (encodingString == "stop")
-                        {
-                            stop();
-                            break;
+                            int initComm = sender.Receive(initialCommand);
+
+                            string encodingInitComm = Encoding.ASCII.GetString(initialCommand, 0, initComm);
+                            Console.WriteLine(encodingInitComm);
+
+                            string command = Console.ReadLine();
+
+                            byte[] messageSent = Encoding.ASCII.GetBytes(command);
+                            int byteSent = sender.Send(messageSent);
+
+                            byte[] messageReceived = new byte[1024];
+
+                            int byteRcvd = sender.Receive(messageReceived);
+
+                            string encodingString = Encoding.ASCII.GetString(messageReceived, 0, byteRcvd);
+                            Console.WriteLine(encodingString);
+
+                            if (encodingString == "Enter username:")
+                            {
+                                addUser();
+                            }
+                            if (encodingString == "logout")
+                            {
+                                isLoggedIn = false;
+                                continue;
+                            }
+
+                            if (encodingString == "stop")
+                            {
+                                stop();
+                                break;
+                            }
                         }
                     }
                 }
@@ -110,6 +100,26 @@ namespace Client
             }
         }
 
+        private static void Menu()
+        {
+            Console.WriteLine("Type '1' to login\n" +
+                            "Type '2' to create new user\n" +
+                            "Type anything else to quit");
+            char choice = Console.ReadKey().KeyChar;
+            if (choice == '1')
+            {
+                login();
+            }
+            else if (choice == '2')
+            {
+                addUser();
+            }
+            else
+            {
+                return;
+            }
+        }
+
         private static void stop()
         {
             sender.Shutdown(SocketShutdown.Both);
@@ -126,15 +136,23 @@ namespace Client
             string username = Console.ReadLine();
 
             enterUsername(username);
+            
             passwordRequest();
+
+            //Needed to add "notLoggedIn" flag to call out to break method here if user doesn't exist.
+            if (notLoggedInFlag == true)
+            {
+                notLoggedInFlag = false;
+                return;
+            }
 
             string password = Console.ReadLine();
 
             enterPassword(password);
-            byte[] receiveLoginAnswerIGuess = new byte[1024];
-            int loginAnswerReceived = sender.Receive(receiveLoginAnswerIGuess);
+            byte[] receiveLoginAnswer = new byte[1024];
+            int loginAnswerReceived = sender.Receive(receiveLoginAnswer);
 
-            string encodingLoginAnswer = Encoding.ASCII.GetString(receiveLoginAnswerIGuess, 0, loginAnswerReceived);
+            string encodingLoginAnswer = Encoding.ASCII.GetString(receiveLoginAnswer, 0, loginAnswerReceived);
 
             if (encodingLoginAnswer == "loggedIn") 
             {
@@ -144,6 +162,7 @@ namespace Client
             else
             {
                 Console.WriteLine(encodingLoginAnswer);
+
             }
         }
 
@@ -188,10 +207,15 @@ namespace Client
 
         private static void passwordRequest()
         {
-            byte[] receivePasswordRequestIGuess = new byte[1024];
-            int passwordRequestReceived = sender.Receive(receivePasswordRequestIGuess);
-            string encodingStringPasswordRequest = Encoding.ASCII.GetString(receivePasswordRequestIGuess, 0, passwordRequestReceived);
+            byte[] receivePasswordRequest = new byte[1024];
+            int passwordRequestReceived = sender.Receive(receivePasswordRequest);
+            string encodingStringPasswordRequest = Encoding.ASCII.GetString(receivePasswordRequest, 0, passwordRequestReceived);
             Console.WriteLine(encodingStringPasswordRequest);
+            if (encodingStringPasswordRequest.ToLower().Equals("user doesn't exist."))
+            {
+                notLoggedInFlag = true;
+            }
+
         }
 
         private static void enterPassword(string password)
