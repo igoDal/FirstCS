@@ -165,6 +165,10 @@ namespace Client
 
             }
         }
+        private static void editUser()
+        {
+
+        }
 
         private static void addUser()
         {
