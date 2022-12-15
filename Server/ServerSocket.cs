@@ -22,6 +22,8 @@ namespace Server
         private static readonly byte[] bytesU = new byte[1024];
         private static readonly byte[] bytesP = new byte[1024];
         private static bool loggedIn = false;
+        private static string currentRole;
+        private static string loggedInUser;
 
         static void Main(string[] args)
         {
@@ -84,6 +86,9 @@ namespace Server
                             case "add":
                                 addUser();
                                 break;
+                            case "edit":
+                                editUserData();
+                                break;
                             case "help":
                                 helpCommand();
                                 break;
@@ -121,6 +126,30 @@ namespace Server
             }
         }
 
+        private static void editUserData()
+        {
+            message = Encoding.ASCII.GetBytes($"Enter username:");
+            clientSocket.Send(message);
+
+            string username;
+            string password;
+            int numByte = clientSocket.Receive(bytesU);
+            username = Encoding.ASCII.GetString(bytesU, 0, numByte);
+            var file = $"{username}.json";
+
+            if (currentRole.ToLower().Equals("admin"))
+            {
+                var fileRead = File.ReadAllText(file);
+                var singleUserData = JsonConvert.DeserializeObject<User>(fileRead);
+                Console.WriteLine(singleUserData.ToString());
+
+            }
+            else
+            {
+                Console.WriteLine("Only admin can update user's data");
+            }
+        }
+
         private static void login()
         {
             message = Encoding.ASCII.GetBytes($"Enter username:");
@@ -143,6 +172,10 @@ namespace Server
 
                 var singleUserData = JsonConvert.DeserializeObject<User>(fileRead);
                 string getPassword = singleUserData.Password;
+                currentRole = singleUserData.Role;
+                loggedInUser = singleUserData.Userame;
+                
+
 
                 Console.WriteLine(getPassword);
                 if (getPassword.Equals(password))
