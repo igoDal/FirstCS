@@ -65,7 +65,19 @@ namespace Client
                             string encodingString = Encoding.ASCII.GetString(messageReceived, 0, byteRcvd);
                             Console.WriteLine(encodingString);
 
-                            //Need to change it to switch-case
+                            //Probably need to change it to switch-case
+                            switch (encodingString)
+                            {
+                                case "Enter username:":
+                                    addUser();
+                                    break;
+                                case "logout":
+                                    isLoggedIn = false;
+                                    continue;
+                                case "stop":
+                                    stop();
+                                    break;
+                            }
                             //if (encodingString == "Enter username:")
                             //{
                             //    addUser();
