@@ -42,15 +42,18 @@ namespace Client
 
                         while (isLoggedIn)
                         {
+                            // Whole method needs to be changed
+
+                            //------------START-------------
                             byte[] initialCommand = new byte[1024];
 
                             int initComm = sender.Receive(initialCommand);
 
                             string encodingInitComm = Encoding.ASCII.GetString(initialCommand, 0, initComm);
                             Console.WriteLine(encodingInitComm);
-
+                            
                             string command = Console.ReadLine();
-
+                            // Good to this moment. Below code needs to be changed.
                             byte[] messageSent = Encoding.ASCII.GetBytes(command);
                             int byteSent = sender.Send(messageSent);
 
@@ -58,24 +61,27 @@ namespace Client
 
                             int byteRcvd = sender.Receive(messageReceived);
 
+                            // Server returns "Enter username" for add method, which is not correct. Need for refactor
                             string encodingString = Encoding.ASCII.GetString(messageReceived, 0, byteRcvd);
                             Console.WriteLine(encodingString);
 
-                            if (encodingString == "Enter username:")
-                            {
-                                addUser();
-                            }
-                            if (encodingString == "logout")
-                            {
-                                isLoggedIn = false;
-                                continue;
-                            }
+                            //Need to change it to switch-case
+                            //if (encodingString == "Enter username:")
+                            //{
+                            //    addUser();
+                            //}
+                            //if (encodingString == "logout")
+                            //{
+                            //    isLoggedIn = false;
+                            //    continue;
+                            //}
 
-                            if (encodingString == "stop")
-                            {
-                                stop();
-                                break;
-                            }
+                            //if (encodingString == "stop")
+                            //{
+                            //    stop();
+                            //    break;
+                            //}
+                            //--------------END---------------
                         }
                     }
                 }
