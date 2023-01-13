@@ -45,6 +45,7 @@ namespace Client
                             // Whole method needs to be changed
 
                             //------------START-------------
+                            
                             byte[] initialCommand = new byte[1024];
 
                             int initComm = sender.Receive(initialCommand);
@@ -54,6 +55,7 @@ namespace Client
                             
                             string command = Console.ReadLine();
                             // Good to this moment. Below code needs to be changed.
+                            /*
                             byte[] messageSent = Encoding.ASCII.GetBytes(command);
                             int byteSent = sender.Send(messageSent);
 
@@ -64,11 +66,12 @@ namespace Client
                             // Server returns "Enter username" for add method, which is not correct. Need for refactor
                             string encodingString = Encoding.ASCII.GetString(messageReceived, 0, byteRcvd);
                             Console.WriteLine(encodingString);
+                            */
 
                             //Probably need to change it to switch-case
-                            switch (encodingString)
+                            switch (command)
                             {
-                                case "Enter username:":
+                                case "add":
                                     addUser();
                                     break;
                                 case "logout":
