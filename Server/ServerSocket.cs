@@ -292,40 +292,6 @@ namespace Server
                 clientSocket.Send(msg);
             }
         }
-        //        private static void printUser()
-        //{
-
-        //    if (currentRole.ToLower().Equals("admin"))
-        //    {
-        //        message = Encoding.ASCII.GetBytes($"Enter username:");
-        //        clientSocket.Send(message);
-
-        //        string username;
-        //        string role = null;
-        //        int numByte = clientSocket.Receive(bytesU);
-        //        username = Encoding.ASCII.GetString(bytesU, 0, numByte);
-        //        var file = $"{username}.json";
-                
-        //        byte[] roleAsk = Encoding.ASCII.GetBytes("Press:" +
-        //            "1 - to change role to ADMIN" +
-        //            "2 - to change role to USER");
-        //        clientSocket.Send(roleAsk);
-        //        int roleByte = clientSocket.Receive(bytesU);
-        //        username = Encoding.ASCII.GetString(bytesU, 0, roleByte);
-
-        //        var fileRead = File.ReadAllText(file);
-        //        var singleUserData = JsonConvert.DeserializeObject<User>(fileRead);
-
-        //        byte[] msg = Encoding.ASCII.GetBytes($"{username}'s role has been updated to: {role}");
-        //        clientSocket.Send(msg);
-
-        //    }
-        //    else
-        //    {
-        //        byte[] msg = Encoding.ASCII.GetBytes("Only admin can update user's data");
-        //        clientSocket.Send(msg);
-        //    }
-        //}
 
         private static void login()
         {

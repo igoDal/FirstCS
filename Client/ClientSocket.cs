@@ -245,12 +245,10 @@ namespace Client
             {
                 Console.WriteLine("Enter username you'd like to check");
                 string username = Console.ReadLine();
-                //enterUsername(username);
                 defaultMessage(username);
             }
             else
             {
-                //Console.WriteLine(encodingString);
                 defaultMessage(encodingString);
             }
 
