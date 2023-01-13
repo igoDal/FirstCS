@@ -119,6 +119,9 @@ namespace Server
                             case "delete":
                                 deleteUser();
                                 break;
+                            case "msg":
+                                sendMessage();
+                                break;
 
                             default:
                                 incorrectCommand(); 
@@ -130,6 +133,30 @@ namespace Server
             catch (Exception ex)
             {
                 Console.WriteLine(ex.ToString());
+            }
+        }
+
+        private static void sendMessage()
+        {
+            message = Encoding.ASCII.GetBytes($"Enter username:");
+            clientSocket.Send(message);
+
+            string username;
+
+            int numByte = clientSocket.Receive(bytesU);
+            username = Encoding.ASCII.GetString(bytesU, 0, numByte);
+            if (File.Exists($"{username}.json"))
+            {
+                byte[] getMessage = Encoding.ASCII.GetBytes($"Type your message: ");
+                clientSocket.Send(getMessage);
+
+                int numBytePassword = clientSocket.Receive(bytesP);
+                string message = Encoding.ASCII.GetString(bytesP, 0, numBytePassword);
+
+                File.AppendAllText($"{username}_msg.txt", message + "\n");
+
+                byte[] confirmMsg = Encoding.ASCII.GetBytes("Message has been sent.");
+                clientSocket.Send(confirmMsg);
             }
         }
 
@@ -295,6 +322,7 @@ namespace Server
                                 $"'add' - to add new user\n" +
                                 $"'info' - to get info about server version, server creation date\n" +
                                 $"'help' - to get a list of available commands with their description\n" +
+                                $"'msg' - to send a message to other user\n" +
                                 $"'uptime' - to check server uptime\n" +
                                 $"'stop' - to stop the server\n");
             clientSocket.Send(message);

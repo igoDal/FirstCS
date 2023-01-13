@@ -65,6 +65,9 @@ namespace Client
                                 case "stop":
                                     stop();
                                     break;
+                                case "msg":
+                                    sendMessage(command);
+                                    break;
                                 default:
                                     defaultMessage(command);
                                     break;
@@ -91,6 +94,40 @@ namespace Client
             {
                 Console.WriteLine(e.ToString());
             }
+        }
+
+        private static void sendMessage(string command)
+        {
+            //Call sendMessage method on server side
+            byte[] msgCommand = Encoding.ASCII.GetBytes(command);
+            int byteSent = sender.Send(msgCommand);
+            byte[] msgReceived = new byte[1024];
+            int byteRcvd = sender.Receive(msgReceived);
+            string encodingString = Encoding.ASCII.GetString(msgReceived, 0, byteRcvd);
+            Console.WriteLine(encodingString);
+            
+            //Request for username (message receiver)
+            //Console.WriteLine("Type a message: ");
+            string userToSend = Console.ReadLine();
+            byte[] usernameSent = Encoding.ASCII.GetBytes(userToSend);
+            int byteUserToSend = sender.Send(usernameSent);
+
+            byte[] userToSendReceived = new byte[1024];
+
+            int byteUserRcvd = sender.Receive(userToSendReceived);
+
+            string encodingUserString = Encoding.ASCII.GetString(userToSendReceived, 0, byteUserRcvd);
+            Console.WriteLine(encodingUserString);
+
+            //Console.WriteLine("Enter a message: ");
+            string message = Console.ReadLine();
+            byte[] messageToSend = Encoding.ASCII.GetBytes(message);
+            int byteMessageSent = sender.Send(messageToSend);
+
+            byte[] messageReceived = new byte[1024];
+            int byteMessageRcvd = sender.Receive(messageReceived);
+            string encodingStringMessage = Encoding.ASCII.GetString(messageReceived, 0, byteMessageRcvd);
+            Console.WriteLine(encodingStringMessage);
         }
 
         private static void Menu()
