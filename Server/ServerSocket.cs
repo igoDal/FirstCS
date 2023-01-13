@@ -41,12 +41,18 @@ namespace Server
                 listener.Bind(localEndPoint);
                 listener.Listen(10);
 
+                //Below lines were in while loop. Testing if it was correct.
+                //--------------START----------------
                 Console.WriteLine("Awaiting connection...");
-
                 clientSocket = listener.Accept();
                 Console.WriteLine("Connected");
+                //---------------END-----------------
+
+
                 while (true)
                 {
+                    //Checking if there should be one or two while loops. Probably first one (for !loggedIn) is not needed.
+                    //--------------START----------------
 
                     //while (!loggedIn)
                     //{
@@ -68,6 +74,7 @@ namespace Server
                     else
                         break;
                     //}
+                    //---------------END-----------------
 
                     while (loggedIn)
                     {

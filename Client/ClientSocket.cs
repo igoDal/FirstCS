@@ -75,11 +75,15 @@ namespace Client
                                     addUser();
                                     break;
                                 case "logout":
-                                    logout();
-                                    continue;
+                                    logout(command);
+                                    break;
                                 case "stop":
                                     stop();
                                     break;
+                                default:
+                                    defaultMessage(command);
+                                    break;
+
                             }
                             //if (encodingString == "Enter username:")
                             //{
@@ -142,6 +146,18 @@ namespace Client
             }
         }
 
+        private static void defaultMessage(string command)
+        {
+            byte[] messageSent = Encoding.ASCII.GetBytes(command);
+            int byteSent = sender.Send(messageSent);
+
+            byte[] messageReceived = new byte[1024];
+
+            int byteRcvd = sender.Receive(messageReceived);
+
+            string encodingString = Encoding.ASCII.GetString(messageReceived, 0, byteRcvd);
+            Console.WriteLine(encodingString);
+        }
         private static void stop()
         {
             sender.Shutdown(SocketShutdown.Both);
@@ -187,18 +203,19 @@ namespace Client
 
             }
         }
-        private static void logout()
+        private static void logout(string command)
         {
             isLoggedIn = false;
-            byte[] messageSent = Encoding.ASCII.GetBytes("logout");
-            int byteSent = sender.Send(messageSent);
+            defaultMessage(command);
+            //byte[] messageSent = Encoding.ASCII.GetBytes("logout");
+            //int byteSent = sender.Send(messageSent);
 
-            byte[] messageReceived = new byte[1024];
+            //byte[] messageReceived = new byte[1024];
 
-            int byteRcvd = sender.Receive(messageReceived);
+            //int byteRcvd = sender.Receive(messageReceived);
 
-            string encodingString = Encoding.ASCII.GetString(messageReceived, 0, byteRcvd);
-            Console.WriteLine(encodingString);
+            //string encodingString = Encoding.ASCII.GetString(messageReceived, 0, byteRcvd);
+            //Console.WriteLine(encodingString);
         }
         private static void editUser()
         {
