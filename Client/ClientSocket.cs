@@ -65,6 +65,15 @@ namespace Client
                                 case "stop":
                                     stop();
                                     break;
+                                case "msg":
+                                    sendMessage(command);
+                                    break;
+                                case "read":
+                                    readMessage(command);
+                                    break;
+                                case "user":
+                                    printUserInfo(command);
+                                    break;
                                 default:
                                     defaultMessage(command);
                                     break;
@@ -93,11 +102,55 @@ namespace Client
             }
         }
 
+        private static void readMessage(string command)
+        {
+            defaultMessage(command);
+        }
+
+        private static void sendMessage(string command)
+        {
+            //Call sendMessage method on server side
+            byte[] msgCommand = Encoding.ASCII.GetBytes(command);
+            int byteSent = sender.Send(msgCommand);
+            byte[] msgReceived = new byte[1024];
+            int byteRcvd = sender.Receive(msgReceived);
+            string encodingString = Encoding.ASCII.GetString(msgReceived, 0, byteRcvd);
+            Console.WriteLine(encodingString);
+            
+            //Request for username (message receiver)
+            //Console.WriteLine("Type a message: ");
+            string userToSend = Console.ReadLine();
+            byte[] usernameSent = Encoding.ASCII.GetBytes(userToSend);
+            int byteUserToSend = sender.Send(usernameSent);
+
+            byte[] userToSendReceived = new byte[1024];
+
+            int byteUserRcvd = sender.Receive(userToSendReceived);
+
+            string encodingUserString = Encoding.ASCII.GetString(userToSendReceived, 0, byteUserRcvd);
+            Console.WriteLine(encodingUserString);
+
+            //Console.WriteLine("Enter a message: ");
+            string message = Console.ReadLine();
+            const int MAX_LENGTH = 255;
+            if (message.Length > MAX_LENGTH)
+            {
+                message = message.Substring(0, MAX_LENGTH);
+            }
+            byte[] messageToSend = Encoding.ASCII.GetBytes(message);
+            int byteMessageSent = sender.Send(messageToSend);
+
+            byte[] messageReceived = new byte[1024];
+            int byteMessageRcvd = sender.Receive(messageReceived);
+            string encodingStringMessage = Encoding.ASCII.GetString(messageReceived, 0, byteMessageRcvd);
+            Console.WriteLine(encodingStringMessage);
+        }
+
         private static void Menu()
         {
             Console.WriteLine("Type '1' to login\n" +
-                            "Type '2' to create new user\n" +
-                            "Type anything else to quit");
+                            "Type '2' to create new user\n"); //+
+                            //"Type other number to quit");
             char choice = Console.ReadKey().KeyChar;
             if (choice == '1')
             {
@@ -177,9 +230,29 @@ namespace Client
             defaultMessage(command);
         }
 
-        private static void editUser()
+        private static void printUserInfo(string command)
         {
+            byte[] messageSent = Encoding.ASCII.GetBytes(command);
+            int byteSent = sender.Send(messageSent);
 
+            byte[] messageReceived = new byte[1024];
+
+            int byteRcvd = sender.Receive(messageReceived);
+
+            string encodingString = Encoding.ASCII.GetString(messageReceived, 0, byteRcvd);
+
+            if (encodingString.ToLower().Equals("approved"))
+            {
+                Console.WriteLine("Enter username you'd like to check");
+                string username = Console.ReadLine();
+                defaultMessage(username);
+            }
+            else
+            {
+                defaultMessage(encodingString);
+            }
+
+            
         }
 
         private static void addUser()
@@ -227,7 +300,6 @@ namespace Client
             {
                 notLoggedInFlag = true;
             }
-
         }
 
         private static void enterPassword(string password)
