@@ -75,7 +75,7 @@ namespace Client
                                     addUser();
                                     break;
                                 case "logout":
-                                    isLoggedIn = false;
+                                    logout();
                                     continue;
                                 case "stop":
                                     stop();
@@ -120,6 +120,7 @@ namespace Client
                 Console.WriteLine(e.ToString());
             }
         }
+
 
         private static void Menu()
         {
@@ -185,6 +186,19 @@ namespace Client
                 Console.WriteLine(encodingLoginAnswer);
 
             }
+        }
+        private static void logout()
+        {
+            isLoggedIn = false;
+            byte[] messageSent = Encoding.ASCII.GetBytes("logout");
+            int byteSent = sender.Send(messageSent);
+
+            byte[] messageReceived = new byte[1024];
+
+            int byteRcvd = sender.Receive(messageReceived);
+
+            string encodingString = Encoding.ASCII.GetString(messageReceived, 0, byteRcvd);
+            Console.WriteLine(encodingString);
         }
         private static void editUser()
         {
