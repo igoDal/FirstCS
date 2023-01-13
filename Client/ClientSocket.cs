@@ -68,6 +68,9 @@ namespace Client
                                 case "msg":
                                     sendMessage(command);
                                     break;
+                                case "read":
+                                    readMessage(command);
+                                    break;
                                 default:
                                     defaultMessage(command);
                                     break;
@@ -94,6 +97,11 @@ namespace Client
             {
                 Console.WriteLine(e.ToString());
             }
+        }
+
+        private static void readMessage(string command)
+        {
+            defaultMessage(command);
         }
 
         private static void sendMessage(string command)

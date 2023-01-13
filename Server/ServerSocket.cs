@@ -119,8 +119,13 @@ namespace Server
                             case "delete":
                                 deleteUser();
                                 break;
+
                             case "msg":
                                 sendMessage();
+                                break;
+
+                            case "read":
+                                readMessage();
                                 break;
 
                             default:
@@ -134,6 +139,62 @@ namespace Server
             {
                 Console.WriteLine(ex.ToString());
             }
+        }
+
+        private static void readMessage()
+        {
+            var file = $"{loggedInUser}_msg.txt";
+            string readMessage = null;
+            IEnumerable<string> lines = null;
+            if (File.Exists(file))
+            {
+                // var lineRead = File.ReadLines(file);
+
+                using (StreamReader reader = File.OpenText(file))
+                {
+                    if (!reader.EndOfStream)
+                    {
+                        readMessage = reader.ReadLine();
+                        lines = File.ReadAllLines(file);
+
+                        
+                        //JsonReader line;
+                        //int numBytePassword = clientSocket.Receive(bytesP);
+                        //password = Encoding.ASCII.GetString(bytesP, 0, numBytePassword);
+
+                        //var singleUserData = JsonConvert.DeserializeObject<User>(fileRead);
+                        //string getPassword = singleUserData.Password;
+                        //currentRole = singleUserData.Role;
+                        //loggedInUser = singleUserData.Userame;
+                    }
+                    else
+                    {
+                        readMessage = "none";
+                    }
+                }
+                if (!readMessage.Equals("none"))
+                {
+                    byte[] readMsgBytes = Encoding.ASCII.GetBytes(readMessage);
+                    clientSocket.Send(readMsgBytes);
+                    File.WriteAllLines(file, lines.Skip(1));
+                }
+                else
+                {
+                    message = Encoding.ASCII.GetBytes($"There are no new messages.");
+                    clientSocket.Send(message);
+                }
+                
+            }
+            
+
+            else
+            {
+                message = Encoding.ASCII.GetBytes($"There are no new messages.");
+                clientSocket.Send(message);
+
+            }
+            //File.WriteAllLines(file, lines.Skip(1));
+
         }
 
         private static void sendMessage()
