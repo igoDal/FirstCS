@@ -41,33 +41,40 @@ namespace Server
                 listener.Bind(localEndPoint);
                 listener.Listen(10);
 
+                //Below lines were in while loop. Testing if it was correct.
+                //--------------START----------------
+                Console.WriteLine("Awaiting connection...");
+                clientSocket = listener.Accept();
+                Console.WriteLine("Connected");
+                //---------------END-----------------
+
+
                 while (true)
                 {
-                    Console.WriteLine("Awaiting connection...");
+                    //Checking if there should be one or two while loops. Probably first one (for !loggedIn) is not needed.
+                    //--------------START----------------
 
-                    clientSocket = listener.Accept();
+                    //while (!loggedIn)
+                    //{
 
-                    while (!loggedIn)
+                    byte[] firstBytes = new byte[1024];
+                    string firstData = null;
+
+                    int firstNumByte = clientSocket.Receive(firstBytes);
+                    firstData += Encoding.ASCII.GetString(firstBytes, 0, firstNumByte);
+
+                    if (firstData.ToLower() == "login")
                     {
-                        Console.WriteLine("Connected");
-
-                        byte[] firstBytes = new byte[1024];
-                        string firstData = null;
-
-                        int firstNumByte = clientSocket.Receive(firstBytes);
-                        firstData += Encoding.ASCII.GetString(firstBytes, 0, firstNumByte);
-
-                        if (firstData.ToLower() == "login")
-                        {
-                            login();
-                        }
-                        else if (firstData.ToLower() == "add")
-                        {
-                            addUser();
-                        }
-                        else
-                            break;
+                        login();
                     }
+                    else if (firstData.ToLower() == "add")
+                    {
+                        addUser();
+                    }
+                    else
+                        break;
+                    //}
+                    //---------------END-----------------
 
                     while (loggedIn)
                     {
@@ -196,6 +203,14 @@ namespace Server
                 clientSocket.Send(message);
             }
         }
+
+            private static void logout()
+        {
+            loggedIn = false;
+            byte[] message = Encoding.ASCII.GetBytes("logout");
+            clientSocket.Send(message);
+        }
+
         private static void addUser()
         {
             message = Encoding.ASCII.GetBytes($"Enter username:");
@@ -245,11 +260,6 @@ namespace Server
             clientSocket.Send(message);
         }
 
-            private static void logout()
-        {
-            byte[] message = Encoding.ASCII.GetBytes("logout");
-            clientSocket.Send(message);
-        }
 
         private static void incorrectCommand()
         {
