@@ -71,6 +71,9 @@ namespace Client
                                 case "read":
                                     readMessage(command);
                                     break;
+                                case "user":
+                                    printUserInfo(command);
+                                    break;
                                 default:
                                     defaultMessage(command);
                                     break;
@@ -129,6 +132,11 @@ namespace Client
 
             //Console.WriteLine("Enter a message: ");
             string message = Console.ReadLine();
+            const int MAX_LENGTH = 255;
+            if (message.Length > MAX_LENGTH)
+            {
+                message = message.Substring(0, MAX_LENGTH);
+            }
             byte[] messageToSend = Encoding.ASCII.GetBytes(message);
             int byteMessageSent = sender.Send(messageToSend);
 
@@ -141,8 +149,8 @@ namespace Client
         private static void Menu()
         {
             Console.WriteLine("Type '1' to login\n" +
-                            "Type '2' to create new user\n" +
-                            "Type anything else to quit");
+                            "Type '2' to create new user\n"); //+
+                            //"Type other number to quit");
             char choice = Console.ReadKey().KeyChar;
             if (choice == '1')
             {
@@ -222,9 +230,31 @@ namespace Client
             defaultMessage(command);
         }
 
-        private static void editUser()
+        private static void printUserInfo(string command)
         {
+            byte[] messageSent = Encoding.ASCII.GetBytes(command);
+            int byteSent = sender.Send(messageSent);
 
+            byte[] messageReceived = new byte[1024];
+
+            int byteRcvd = sender.Receive(messageReceived);
+
+            string encodingString = Encoding.ASCII.GetString(messageReceived, 0, byteRcvd);
+
+            if (encodingString.ToLower().Equals("approved"))
+            {
+                Console.WriteLine("Enter username you'd like to check");
+                string username = Console.ReadLine();
+                //enterUsername(username);
+                defaultMessage(username);
+            }
+            else
+            {
+                //Console.WriteLine(encodingString);
+                defaultMessage(encodingString);
+            }
+
+            
         }
 
         private static void addUser()
@@ -272,7 +302,6 @@ namespace Client
             {
                 notLoggedInFlag = true;
             }
-
         }
 
         private static void enterPassword(string password)

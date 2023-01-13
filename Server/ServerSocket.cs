@@ -93,8 +93,8 @@ namespace Server
                             case "add":
                                 addUser();
                                 break;
-                            case "edit":
-                                editUserData();
+                            case "user":
+                                printUserInfo();
                                 break;
                             case "help":
                                 helpCommand();
@@ -148,24 +148,12 @@ namespace Server
             IEnumerable<string> lines = null;
             if (File.Exists(file))
             {
-                // var lineRead = File.ReadLines(file);
-
                 using (StreamReader reader = File.OpenText(file))
                 {
                     if (!reader.EndOfStream)
                     {
                         readMessage = reader.ReadLine();
                         lines = File.ReadAllLines(file);
-
-                        
-                        //JsonReader line;
-                        //int numBytePassword = clientSocket.Receive(bytesP);
-                        //password = Encoding.ASCII.GetString(bytesP, 0, numBytePassword);
-
-                        //var singleUserData = JsonConvert.DeserializeObject<User>(fileRead);
-                        //string getPassword = singleUserData.Password;
-                        //currentRole = singleUserData.Role;
-                        //loggedInUser = singleUserData.Userame;
                     }
                     else
                     {
@@ -183,18 +171,12 @@ namespace Server
                     message = Encoding.ASCII.GetBytes($"There are no new messages.");
                     clientSocket.Send(message);
                 }
-                
             }
-            
-
             else
             {
                 message = Encoding.ASCII.GetBytes($"There are no new messages.");
                 clientSocket.Send(message);
-
             }
-            //File.WriteAllLines(file, lines.Skip(1));
-
         }
 
         private static void sendMessage()
@@ -203,47 +185,147 @@ namespace Server
             clientSocket.Send(message);
 
             string username;
+            int count = 0;
 
             int numByte = clientSocket.Receive(bytesU);
             username = Encoding.ASCII.GetString(bytesU, 0, numByte);
-            if (File.Exists($"{username}.json"))
+            var file = $"{username}.json";
+            var msgFile = $"{username}_msg.txt";
+            if (File.Exists(file))
             {
+
+                if (!File.Exists($"{username}_msg.txt"))
+                {
+                    using (StreamWriter sw = new StreamWriter(msgFile))
+                    {
+                    }
+                }
+
                 byte[] getMessage = Encoding.ASCII.GetBytes($"Type your message: ");
                 clientSocket.Send(getMessage);
 
                 int numBytePassword = clientSocket.Receive(bytesP);
                 string message = Encoding.ASCII.GetString(bytesP, 0, numBytePassword);
+                using(StreamReader sr = new StreamReader(msgFile))
+                {
+                    while (sr.ReadLine() != null)
+                    {
+                        count++;
+                    }
+                }
 
-                File.AppendAllText($"{username}_msg.txt", message + "\n");
+                if (count < 5)
+                {
+                    File.AppendAllText($"{username}_msg.txt", message + "\n");
 
-                byte[] confirmMsg = Encoding.ASCII.GetBytes("Message has been sent.");
+                    byte[] confirmMsg = Encoding.ASCII.GetBytes("Message has been sent.");
+                    clientSocket.Send(confirmMsg);
+                }
+                else
+                {
+                    byte[] errorMsg = Encoding.ASCII.GetBytes("Mailbox is full.");
+                    clientSocket.Send(errorMsg);
+                }
+            }
+            else
+            {
+                byte[] confirmMsg = Encoding.ASCII.GetBytes("User doesn't exist.");
                 clientSocket.Send(confirmMsg);
             }
         }
 
-        private static void editUserData()
+        private static void printUserInfo()
         {
-            message = Encoding.ASCII.GetBytes($"Enter username:");
-            clientSocket.Send(message);
-
-            string username;
-            string password;
-            int numByte = clientSocket.Receive(bytesU);
-            username = Encoding.ASCII.GetString(bytesU, 0, numByte);
-            var file = $"{username}.json";
 
             if (currentRole.ToLower().Equals("admin"))
             {
-                var fileRead = File.ReadAllText(file);
-                var singleUserData = JsonConvert.DeserializeObject<User>(fileRead);
-                Console.WriteLine(singleUserData.ToString());
+                message = Encoding.ASCII.GetBytes($"approved");
+                clientSocket.Send(message);
+
+                string username;
+                User singleUserData = null;
+                
+                int numByte = clientSocket.Receive(bytesU);
+                username = Encoding.ASCII.GetString(bytesU, 0, numByte);
+                var file = $"{username}.json";
+
+                if (File.Exists(file))
+                {
+
+                    using (StreamReader reader = new StreamReader(file))
+                    {
+                        var fileRead = File.ReadAllText(file);
+                        singleUserData = JsonConvert.DeserializeObject<User>(fileRead);
+                    }
+                    string getPassword = singleUserData.Password;
+                    string getRole = singleUserData.Role;
+                    loggedInUser = singleUserData.Userame;
+                    byte[] msg = Encoding.ASCII.GetBytes($"Username: {username}\n" +
+                        $"Password: {getPassword}\n" +
+                        $"Role: {getRole}\n");
+                    clientSocket.Send(msg);
+                }
+                else
+                {
+                    byte[] msg = Encoding.ASCII.GetBytes("User doesn't exist.");
+                    clientSocket.Send(msg);
+                }
+
 
             }
             else
             {
-                Console.WriteLine("Only admin can update user's data");
+                var file = $"{loggedInUser}.json";
+                User singleUserData = null;
+                using (StreamReader reader = new StreamReader(file))
+                {
+                    var fileRead = File.ReadAllText(file);
+                    singleUserData = JsonConvert.DeserializeObject<User>(fileRead);
+                }
+                
+                string getPassword = singleUserData.Password;
+                currentRole = singleUserData.Role;
+                loggedInUser = singleUserData.Userame;
+                byte[] msg = Encoding.ASCII.GetBytes($"Username: {loggedInUser}\n" +
+                    $"Password: {getPassword}\n" +
+                    $"Role: {currentRole}\n");
+                clientSocket.Send(msg);
             }
         }
+        //        private static void printUser()
+        //{
+
+        //    if (currentRole.ToLower().Equals("admin"))
+        //    {
+        //        message = Encoding.ASCII.GetBytes($"Enter username:");
+        //        clientSocket.Send(message);
+
+        //        string username;
+        //        string role = null;
+        //        int numByte = clientSocket.Receive(bytesU);
+        //        username = Encoding.ASCII.GetString(bytesU, 0, numByte);
+        //        var file = $"{username}.json";
+                
+        //        byte[] roleAsk = Encoding.ASCII.GetBytes("Press:" +
+        //            "1 - to change role to ADMIN" +
+        //            "2 - to change role to USER");
+        //        clientSocket.Send(roleAsk);
+        //        int roleByte = clientSocket.Receive(bytesU);
+        //        username = Encoding.ASCII.GetString(bytesU, 0, roleByte);
+
+        //        var fileRead = File.ReadAllText(file);
+        //        var singleUserData = JsonConvert.DeserializeObject<User>(fileRead);
+
+        //        byte[] msg = Encoding.ASCII.GetBytes($"{username}'s role has been updated to: {role}");
+        //        clientSocket.Send(msg);
+
+        //    }
+        //    else
+        //    {
+        //        byte[] msg = Encoding.ASCII.GetBytes("Only admin can update user's data");
+        //        clientSocket.Send(msg);
+        //    }
+        //}
 
         private static void login()
         {
@@ -329,6 +411,7 @@ namespace Server
                     JsonSerializer serializer = new JsonSerializer();
                     serializer.Serialize(file, user);
                 }
+
                 message = Encoding.ASCII.GetBytes($"User {username} has been added.");
             }
 
@@ -381,11 +464,14 @@ namespace Server
         {
             byte[] message = Encoding.ASCII.GetBytes($"Available commands:\n" +
                                 $"'add' - to add new user\n" +
-                                $"'info' - to get info about server version, server creation date\n" +
                                 $"'help' - to get a list of available commands with their description\n" +
+                                $"'info' - to get info about server version, server creation date\n" +
                                 $"'msg' - to send a message to other user\n" +
+                                $"'read' - to read next message\n" +
                                 $"'uptime' - to check server uptime\n" +
-                                $"'stop' - to stop the server\n");
+                                $"'user' - to print user data" +
+                                $"'stop' - to stop the server\n" +
+                                $"'logout' - to log out");
             clientSocket.Send(message);
         }
     }
