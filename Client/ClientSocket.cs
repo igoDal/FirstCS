@@ -52,23 +52,8 @@ namespace Client
 
                             string encodingInitComm = Encoding.ASCII.GetString(initialCommand, 0, initComm);
                             Console.WriteLine(encodingInitComm);
-                            
+
                             string command = Console.ReadLine();
-                            // Good to this moment. Below code needs to be changed.
-                            /*
-                            byte[] messageSent = Encoding.ASCII.GetBytes(command);
-                            int byteSent = sender.Send(messageSent);
-
-                            byte[] messageReceived = new byte[1024];
-
-                            int byteRcvd = sender.Receive(messageReceived);
-
-                            // Server returns "Enter username" for add method, which is not correct. Need for refactor
-                            string encodingString = Encoding.ASCII.GetString(messageReceived, 0, byteRcvd);
-                            Console.WriteLine(encodingString);
-                            */
-
-                            //Probably need to change it to switch-case
                             switch (command)
                             {
                                 case "add":
@@ -83,24 +68,7 @@ namespace Client
                                 default:
                                     defaultMessage(command);
                                     break;
-
                             }
-                            //if (encodingString == "Enter username:")
-                            //{
-                            //    addUser();
-                            //}
-                            //if (encodingString == "logout")
-                            //{
-                            //    isLoggedIn = false;
-                            //    continue;
-                            //}
-
-                            //if (encodingString == "stop")
-                            //{
-                            //    stop();
-                            //    break;
-                            //}
-                            //--------------END---------------
                         }
                     }
                 }
@@ -124,7 +92,6 @@ namespace Client
                 Console.WriteLine(e.ToString());
             }
         }
-
 
         private static void Menu()
         {
@@ -158,6 +125,7 @@ namespace Client
             string encodingString = Encoding.ASCII.GetString(messageReceived, 0, byteRcvd);
             Console.WriteLine(encodingString);
         }
+
         private static void stop()
         {
             sender.Shutdown(SocketShutdown.Both);
@@ -185,7 +153,6 @@ namespace Client
             }
 
             string password = Console.ReadLine();
-
             enterPassword(password);
             byte[] receiveLoginAnswer = new byte[1024];
             int loginAnswerReceived = sender.Receive(receiveLoginAnswer);
@@ -203,20 +170,13 @@ namespace Client
 
             }
         }
+
         private static void logout(string command)
         {
             isLoggedIn = false;
             defaultMessage(command);
-            //byte[] messageSent = Encoding.ASCII.GetBytes("logout");
-            //int byteSent = sender.Send(messageSent);
-
-            //byte[] messageReceived = new byte[1024];
-
-            //int byteRcvd = sender.Receive(messageReceived);
-
-            //string encodingString = Encoding.ASCII.GetString(messageReceived, 0, byteRcvd);
-            //Console.WriteLine(encodingString);
         }
+
         private static void editUser()
         {
 
@@ -235,14 +195,10 @@ namespace Client
 
             string password = Console.ReadLine();
             enterPassword(password);
-
             byte[] messageReceivedPass = new byte[1024];
-
             int byteRcvdPass = sender.Receive(messageReceivedPass);
-
             string encodingStringpass = Encoding.ASCII.GetString(messageReceivedPass, 0, byteRcvdPass);
             Console.WriteLine(encodingStringpass);
-
         }
 
         private static void usernameRequest(string command)
