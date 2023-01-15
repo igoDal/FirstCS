@@ -118,7 +118,6 @@ namespace Client
             Console.WriteLine(encodingString);
             
             //Request for username (message receiver)
-            //Console.WriteLine("Type a message: ");
             string userToSend = Console.ReadLine();
             byte[] usernameSent = Encoding.ASCII.GetBytes(userToSend);
             int byteUserToSend = sender.Send(usernameSent);
@@ -130,7 +129,6 @@ namespace Client
             string encodingUserString = Encoding.ASCII.GetString(userToSendReceived, 0, byteUserRcvd);
             Console.WriteLine(encodingUserString);
 
-            //Console.WriteLine("Enter a message: ");
             string message = Console.ReadLine();
             const int MAX_LENGTH = 255;
             if (message.Length > MAX_LENGTH)
@@ -150,7 +148,6 @@ namespace Client
         {
             Console.WriteLine("Type '1' to login\n" +
                             "Type '2' to create new user\n"); //+
-                            //"Type other number to quit");
             char choice = Console.ReadKey().KeyChar;
             if (choice == '1')
             {
