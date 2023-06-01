@@ -110,7 +110,8 @@ namespace Client
         private static void sendMessage(string command)
         {
             //Call sendMessage method on server side
-            byte[] msgCommand = Encoding.ASCII.GetBytes(command);
+            string jsonCommand = JsonConvert.SerializeObject(command);
+            byte[] msgCommand = Encoding.ASCII.GetBytes(jsonCommand);
             int byteSent = sender.Send(msgCommand);
             byte[] msgReceived = new byte[1024];
             int byteRcvd = sender.Receive(msgReceived);
@@ -119,7 +120,8 @@ namespace Client
             
             //Request for username (message receiver)
             string userToSend = Console.ReadLine();
-            byte[] usernameSent = Encoding.ASCII.GetBytes(userToSend);
+            string jsonUserToSend= JsonConvert.SerializeObject(userToSend);
+            byte[] usernameSent = Encoding.ASCII.GetBytes(jsonUserToSend);
             int byteUserToSend = sender.Send(usernameSent);
 
             byte[] userToSendReceived = new byte[1024];
@@ -135,7 +137,8 @@ namespace Client
             {
                 message = message.Substring(0, MAX_LENGTH);
             }
-            byte[] messageToSend = Encoding.ASCII.GetBytes(message);
+            string jsonMessage = JsonConvert.SerializeObject(command);
+            byte[] messageToSend = Encoding.ASCII.GetBytes(jsonMessage);
             int byteMessageSent = sender.Send(messageToSend);
 
             byte[] messageReceived = new byte[1024];
@@ -165,7 +168,9 @@ namespace Client
 
         private static void defaultMessage(string command)
         {
-            byte[] messageSent = Encoding.ASCII.GetBytes(command);
+            string jsonCommand = JsonConvert.SerializeObject(command);
+            byte[] messageSent = Encoding.ASCII.GetBytes(jsonCommand);
+
             int byteSent = sender.Send(messageSent);
 
             byte[] messageReceived = new byte[1024];
@@ -229,7 +234,8 @@ namespace Client
 
         private static void printUserInfo(string command)
         {
-            byte[] messageSent = Encoding.ASCII.GetBytes(command);
+            string jsonCommand = JsonConvert.SerializeObject(command);
+            byte[] messageSent = Encoding.ASCII.GetBytes(jsonCommand);
             int byteSent = sender.Send(messageSent);
 
             byte[] messageReceived = new byte[1024];
@@ -273,7 +279,8 @@ namespace Client
 
         private static void usernameRequest(string command)
         {
-            byte[] messageSentUsername = Encoding.ASCII.GetBytes(command);
+            string jsonCommand = JsonConvert.SerializeObject(command);
+            byte[] messageSentUsername = Encoding.ASCII.GetBytes(jsonCommand);
             sender.Send(messageSentUsername);
             byte[] messageReceivedUser = new byte[1024];
             int byteRcvdUser = sender.Receive(messageReceivedUser);
@@ -283,7 +290,8 @@ namespace Client
 
         private static void enterUsername(string username)
         {
-            byte[] sendUsername = Encoding.ASCII.GetBytes(username);
+            string jsonSendUsername = JsonConvert.SerializeObject(username);
+            byte[] sendUsername = Encoding.ASCII.GetBytes(jsonSendUsername);
             sender.Send(sendUsername);
         }
 
@@ -301,7 +309,8 @@ namespace Client
 
         private static void enterPassword(string password)
         {
-            byte[] sendPassword = Encoding.ASCII.GetBytes(password);
+            string jsonSendPassword = JsonConvert.SerializeObject(password);
+            byte[] sendPassword = Encoding.ASCII.GetBytes(jsonSendPassword);
             sender.Send(sendPassword);
         }
     }
