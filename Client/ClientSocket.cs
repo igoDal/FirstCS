@@ -50,7 +50,9 @@ namespace Client
 
                             int initComm = sender.Receive(initialCommand);
 
-                            string encodingInitComm = Encoding.ASCII.GetString(initialCommand, 0, initComm);
+                            string jsonInitComm = Encoding.ASCII.GetString(initialCommand, 0, initComm);
+                            string encodingInitComm = JsonConvert.DeserializeObject(jsonInitComm).ToString();
+
                             Console.WriteLine(encodingInitComm);
 
                             string command = Console.ReadLine();
@@ -115,7 +117,9 @@ namespace Client
             int byteSent = sender.Send(msgCommand);
             byte[] msgReceived = new byte[1024];
             int byteRcvd = sender.Receive(msgReceived);
-            string encodingString = Encoding.ASCII.GetString(msgReceived, 0, byteRcvd);
+            string jsonString = Encoding.ASCII.GetString(msgReceived, 0, byteRcvd);
+            string encodingString = JsonConvert.DeserializeObject(jsonString).ToString();
+
             Console.WriteLine(encodingString);
             
             //Request for username (message receiver)
@@ -127,8 +131,8 @@ namespace Client
             byte[] userToSendReceived = new byte[1024];
 
             int byteUserRcvd = sender.Receive(userToSendReceived);
-
-            string encodingUserString = Encoding.ASCII.GetString(userToSendReceived, 0, byteUserRcvd);
+            string jsonUserString = Encoding.ASCII.GetString(userToSendReceived, 0, byteUserRcvd);
+            string encodingUserString = JsonConvert.DeserializeObject(jsonUserString).ToString();
             Console.WriteLine(encodingUserString);
 
             string message = Console.ReadLine();
@@ -143,7 +147,8 @@ namespace Client
 
             byte[] messageReceived = new byte[1024];
             int byteMessageRcvd = sender.Receive(messageReceived);
-            string encodingStringMessage = Encoding.ASCII.GetString(messageReceived, 0, byteMessageRcvd);
+            string jsonStringMessage = Encoding.ASCII.GetString(messageReceived, 0, byteMessageRcvd);
+            string encodingStringMessage = JsonConvert.DeserializeObject(jsonStringMessage).ToString();
             Console.WriteLine(encodingStringMessage);
         }
 
@@ -176,8 +181,8 @@ namespace Client
             byte[] messageReceived = new byte[1024];
 
             int byteRcvd = sender.Receive(messageReceived);
-
-            string encodingString = Encoding.ASCII.GetString(messageReceived, 0, byteRcvd);
+            string jsonString = Encoding.ASCII.GetString(messageReceived, 0, byteRcvd);
+            string encodingString = JsonConvert.DeserializeObject(jsonString).ToString();
             Console.WriteLine(encodingString);
         }
 
@@ -211,8 +216,8 @@ namespace Client
             enterPassword(password);
             byte[] receiveLoginAnswer = new byte[1024];
             int loginAnswerReceived = sender.Receive(receiveLoginAnswer);
-
-            string encodingLoginAnswer = Encoding.ASCII.GetString(receiveLoginAnswer, 0, loginAnswerReceived);
+            string jsonLoginAnswer = Encoding.ASCII.GetString(receiveLoginAnswer, 0, loginAnswerReceived);
+            string encodingLoginAnswer = JsonConvert.DeserializeObject(jsonLoginAnswer).ToString();
 
             if (encodingLoginAnswer == "loggedIn") 
             {
@@ -241,8 +246,8 @@ namespace Client
             byte[] messageReceived = new byte[1024];
 
             int byteRcvd = sender.Receive(messageReceived);
-
-            string encodingString = Encoding.ASCII.GetString(messageReceived, 0, byteRcvd);
+            string jsonString = Encoding.ASCII.GetString(messageReceived, 0, byteRcvd);
+            string encodingString = JsonConvert.DeserializeObject(jsonString).ToString();
 
             if (encodingString.ToLower().Equals("approved"))
             {
@@ -273,7 +278,8 @@ namespace Client
             enterPassword(password);
             byte[] messageReceivedPass = new byte[1024];
             int byteRcvdPass = sender.Receive(messageReceivedPass);
-            string encodingStringpass = Encoding.ASCII.GetString(messageReceivedPass, 0, byteRcvdPass);
+            string jsonStringpass = Encoding.ASCII.GetString(messageReceivedPass, 0, byteRcvdPass);
+            string encodingStringpass = JsonConvert.DeserializeObject(jsonStringpass).ToString();
             Console.WriteLine(encodingStringpass);
         }
 
@@ -284,7 +290,8 @@ namespace Client
             sender.Send(messageSentUsername);
             byte[] messageReceivedUser = new byte[1024];
             int byteRcvdUser = sender.Receive(messageReceivedUser);
-            string encodingString = Encoding.ASCII.GetString(messageReceivedUser, 0, byteRcvdUser);
+            string jsonString = Encoding.ASCII.GetString(messageReceivedUser, 0, byteRcvdUser);
+            string encodingString = JsonConvert.DeserializeObject(jsonString).ToString();
             Console.WriteLine(encodingString);
         }
 
@@ -299,7 +306,8 @@ namespace Client
         {
             byte[] receivePasswordRequest = new byte[1024];
             int passwordRequestReceived = sender.Receive(receivePasswordRequest);
-            string encodingStringPasswordRequest = Encoding.ASCII.GetString(receivePasswordRequest, 0, passwordRequestReceived);
+            string jsonStringPasswordRequest = Encoding.ASCII.GetString(receivePasswordRequest, 0, passwordRequestReceived);
+            string encodingStringPasswordRequest = JsonConvert.DeserializeObject(jsonStringPasswordRequest).ToString();
             Console.WriteLine(encodingStringPasswordRequest);
             if (encodingStringPasswordRequest.ToLower().Equals("user doesn't exist."))
             {
