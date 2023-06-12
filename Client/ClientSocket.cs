@@ -141,7 +141,7 @@ namespace Client
             {
                 message = message.Substring(0, MAX_LENGTH);
             }
-            string jsonMessage = JsonConvert.SerializeObject(command);
+            string jsonMessage = JsonConvert.SerializeObject(message);
             byte[] messageToSend = Encoding.ASCII.GetBytes(jsonMessage);
             int byteMessageSent = sender.Send(messageToSend);
 
