@@ -52,11 +52,6 @@ namespace Server
 
                 while (true)
                 {
-                    //Checking if there should be one or two while loops. Probably first one (for !loggedIn) is not needed.
-                    //--------------START----------------
-
-                    //while (!loggedIn)
-                    //{
 
                     byte[] firstBytes = new byte[1024];
                     string jsonFirstData = null;
@@ -75,8 +70,6 @@ namespace Server
                     }
                     else
                         break;
-                    //}
-                    //---------------END-----------------
 
                     while (loggedIn)
                     {
@@ -142,6 +135,10 @@ namespace Server
             catch (Exception ex)
             {
                 Console.WriteLine(ex.ToString());
+            }
+            finally
+            {
+                listener.Close(); // Close the server socket listener
             }
         }
 

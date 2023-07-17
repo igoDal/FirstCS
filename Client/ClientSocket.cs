@@ -65,7 +65,7 @@ namespace Client
                                     logout(command);
                                     break;
                                 case "stop":
-                                    stop();
+                                    stop(command);
                                     break;
                                 case "msg":
                                     sendMessage(command);
@@ -186,8 +186,19 @@ namespace Client
             Console.WriteLine(encodingString);
         }
 
-        private static void stop()
+        private static void stop(string command)
         {
+            string jsonCommand = JsonConvert.SerializeObject(command);
+            byte[] messageSent = Encoding.ASCII.GetBytes(jsonCommand);
+
+            sender.Send(messageSent);
+
+            //byte[] messageReceived = new byte[1024];
+
+            //int byteRcvd = sender.Receive(messageReceived);
+            //string jsonString = Encoding.ASCII.GetString(messageReceived, 0, byteRcvd);
+            //string encodingString = JsonConvert.DeserializeObject(jsonString).ToString();
+            //Console.WriteLine(encodingString);
             sender.Shutdown(SocketShutdown.Both);
             sender.Close();
         }
