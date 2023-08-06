@@ -13,6 +13,7 @@ namespace Client
     {
         private static bool isLoggedIn = false;
         private static bool isOnline = false;
+        private static bool continueListening = true;
         private static Socket sender;
         private static bool notLoggedInFlag = false;
         static void Main(string[] args)
@@ -36,7 +37,7 @@ namespace Client
                     sender.Connect(localEndpoint);
                     Console.WriteLine("Socket connected to -> {0}", sender.RemoteEndPoint.ToString());
 
-                    while (true)
+                    while (continueListening)
                     {
                         Menu();
 
@@ -80,6 +81,8 @@ namespace Client
                                     defaultMessage(command);
                                     break;
                             }
+                            if (!continueListening)
+                                break;
                         }
                     }
                 }
@@ -102,6 +105,7 @@ namespace Client
             {
                 Console.WriteLine(e.ToString());
             }
+            sender.Close();
         }
 
         private static void readMessage(string command)
@@ -192,15 +196,10 @@ namespace Client
             byte[] messageSent = Encoding.ASCII.GetBytes(jsonCommand);
 
             sender.Send(messageSent);
-
-            //byte[] messageReceived = new byte[1024];
-
-            //int byteRcvd = sender.Receive(messageReceived);
-            //string jsonString = Encoding.ASCII.GetString(messageReceived, 0, byteRcvd);
-            //string encodingString = JsonConvert.DeserializeObject(jsonString).ToString();
-            //Console.WriteLine(encodingString);
             sender.Shutdown(SocketShutdown.Both);
             sender.Close();
+
+            continueListening = false;
         }
 
         private static void login()

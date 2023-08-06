@@ -23,6 +23,7 @@ namespace Server
         private static readonly byte[] bytesU = new byte[1024];
         private static readonly byte[] bytesP = new byte[1024];
         private static bool loggedIn = false;
+        private static bool stopped = false;
         private static string currentRole;
         private static string loggedInUser;
 
@@ -50,7 +51,7 @@ namespace Server
                 //---------------END-----------------
 
 
-                while (true)
+                while (!stopped)
                 {
 
                     byte[] firstBytes = new byte[1024];
@@ -445,11 +446,24 @@ namespace Server
 
         private static void stopCommand()
         {
-            jsonMsg = JsonConvert.SerializeObject("stop");
-            byte[] message = Encoding.ASCII.GetBytes(jsonMsg);
-            clientSocket.Send(message);
-            clientSocket.Shutdown(SocketShutdown.Both);
-            clientSocket.Close();
+
+            try
+            {
+                jsonMsg = JsonConvert.SerializeObject("stop");
+                byte[] message = Encoding.ASCII.GetBytes(jsonMsg);
+                clientSocket.Send(message);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Error while sending 'stop' command: " + ex.ToString());
+            }
+            finally
+            {
+                // Close the client socket
+                //clientSocket.Close();
+                loggedIn = false; // Exit the loggedIn loop
+                stopped = true;
+            }
         }
 
         private static void uptimeCommand()
