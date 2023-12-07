@@ -9,7 +9,7 @@ using Newtonsoft.Json;
 
 namespace Client
 {
-    class ClientSocket
+    public class ClientSocket
     {
         private static bool isLoggedIn = false;
         private static bool isOnline = false;
@@ -158,12 +158,17 @@ namespace Client
 
         private static void Menu()
         {
-            Console.WriteLine("Type '1' to login\n" +
+            Console.WriteLine("\nType '1' to login\n" +
                             "Type '2' to create new user\n"); //+
             char choice = Console.ReadKey().KeyChar;
+            Console.WriteLine();
             if (choice == '1')
             {
-                login();
+                Console.WriteLine("\nPodaj login: ");
+                string username = Console.ReadLine();
+                Console.WriteLine("\nPodaj hasło: ");
+                string password = Console.ReadLine();
+                login(username, password);
             }
             else if (choice == '2')
             {
@@ -202,28 +207,40 @@ namespace Client
             continueListening = false;
         }
 
-        private static void login()
+        public static void login(string username, string password)
         {
             Console.WriteLine();
             string msg = "login";
 
             usernameRequest(msg);
 
-            string username = Console.ReadLine();
-
             enterUsername(username);
-            
+
+
             passwordRequest();
 
-            //Needed to add "notLoggedIn" flag to call out to break method here if user doesn't exist.
+            byte[] receivePasswordRequest = new byte[1024];
+            int passwordRequestReceived = sender.Receive(receivePasswordRequest);
+            string jsonStringPasswordRequest = Encoding.ASCII.GetString(receivePasswordRequest, 0, passwordRequestReceived);
+            string encodingStringPasswordRequest = JsonConvert.DeserializeObject(jsonStringPasswordRequest).ToString();
+            //Console.WriteLine(encodingStringPasswordRequest);
+            if ((!encodingStringPasswordRequest.ToLower().Equals("\nuser doesn't exist.") && String.IsNullOrEmpty(encodingStringPasswordRequest)))
+            {
+                enterPassword(password);
+            }
+            else
+            {
+
+                Console.WriteLine("User doesn't exist. Try again.");
+            }
+
             if (notLoggedInFlag == true)
             {
                 notLoggedInFlag = false;
                 return;
             }
-
-            string password = Console.ReadLine();
-            enterPassword(password);
+            
+            //enterPassword(password);
             byte[] receiveLoginAnswer = new byte[1024];
             int loginAnswerReceived = sender.Receive(receiveLoginAnswer);
             string jsonLoginAnswer = Encoding.ASCII.GetString(receiveLoginAnswer, 0, loginAnswerReceived);
@@ -231,13 +248,12 @@ namespace Client
 
             if (encodingLoginAnswer == "loggedIn") 
             {
-                Console.WriteLine($"{username} has logged in.");
+                Console.WriteLine($"\n{username} has logged in.");
                 isLoggedIn = true;
             }
             else
             {
                 Console.WriteLine(encodingLoginAnswer);
-
             }
         }
 
@@ -261,7 +277,7 @@ namespace Client
 
             if (encodingString.ToLower().Equals("approved"))
             {
-                Console.WriteLine("Enter username you'd like to check");
+                Console.WriteLine("\nEnter username you'd like to check");
                 string username = Console.ReadLine();
                 defaultMessage(username);
             }
@@ -302,7 +318,7 @@ namespace Client
             int byteRcvdUser = sender.Receive(messageReceivedUser);
             string jsonString = Encoding.ASCII.GetString(messageReceivedUser, 0, byteRcvdUser);
             string encodingString = JsonConvert.DeserializeObject(jsonString).ToString();
-            Console.WriteLine(encodingString);
+            //Console.WriteLine(encodingString);
         }
 
         private static void enterUsername(string username)
@@ -318,8 +334,8 @@ namespace Client
             int passwordRequestReceived = sender.Receive(receivePasswordRequest);
             string jsonStringPasswordRequest = Encoding.ASCII.GetString(receivePasswordRequest, 0, passwordRequestReceived);
             string encodingStringPasswordRequest = JsonConvert.DeserializeObject(jsonStringPasswordRequest).ToString();
-            Console.WriteLine(encodingStringPasswordRequest);
-            if (encodingStringPasswordRequest.ToLower().Equals("user doesn't exist."))
+            //Console.WriteLine(encodingStringPasswordRequest);
+            if (encodingStringPasswordRequest.ToLower().Equals("\nuser doesn't exist."))
             {
                 notLoggedInFlag = true;
             }
