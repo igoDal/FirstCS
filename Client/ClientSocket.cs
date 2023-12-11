@@ -212,35 +212,24 @@ namespace Client
             Console.WriteLine();
             string msg = "login";
 
-            usernameRequest(msg);
-
-            enterUsername(username);
+            var userReq = usernameRequest(msg);
 
 
-            passwordRequest();
+            if (userReq.ToLower().Contains("username")) enterUsername(username);
 
-            byte[] receivePasswordRequest = new byte[1024];
-            int passwordRequestReceived = sender.Receive(receivePasswordRequest);
-            string jsonStringPasswordRequest = Encoding.ASCII.GetString(receivePasswordRequest, 0, passwordRequestReceived);
-            string encodingStringPasswordRequest = JsonConvert.DeserializeObject(jsonStringPasswordRequest).ToString();
-            //Console.WriteLine(encodingStringPasswordRequest);
-            if ((!encodingStringPasswordRequest.ToLower().Equals("\nuser doesn't exist.") && String.IsNullOrEmpty(encodingStringPasswordRequest)))
+
+            var passRequested = passwordRequest();
+
+            if (passRequested.ToLower().Contains("password"))
             {
                 enterPassword(password);
             }
             else
             {
-
-                Console.WriteLine("User doesn't exist. Try again.");
-            }
-
-            if (notLoggedInFlag == true)
-            {
-                notLoggedInFlag = false;
+                Console.WriteLine(passRequested);
                 return;
             }
             
-            //enterPassword(password);
             byte[] receiveLoginAnswer = new byte[1024];
             int loginAnswerReceived = sender.Receive(receiveLoginAnswer);
             string jsonLoginAnswer = Encoding.ASCII.GetString(receiveLoginAnswer, 0, loginAnswerReceived);
@@ -309,7 +298,7 @@ namespace Client
             Console.WriteLine(encodingStringpass);
         }
 
-        private static void usernameRequest(string command)
+        private static string usernameRequest(string command)
         {
             string jsonCommand = JsonConvert.SerializeObject(command);
             byte[] messageSentUsername = Encoding.ASCII.GetBytes(jsonCommand);
@@ -318,7 +307,7 @@ namespace Client
             int byteRcvdUser = sender.Receive(messageReceivedUser);
             string jsonString = Encoding.ASCII.GetString(messageReceivedUser, 0, byteRcvdUser);
             string encodingString = JsonConvert.DeserializeObject(jsonString).ToString();
-            //Console.WriteLine(encodingString);
+            return encodingString;
         }
 
         private static void enterUsername(string username)
@@ -328,17 +317,19 @@ namespace Client
             sender.Send(sendUsername);
         }
 
-        private static void passwordRequest()
+        private static string passwordRequest()
         {
             byte[] receivePasswordRequest = new byte[1024];
             int passwordRequestReceived = sender.Receive(receivePasswordRequest);
             string jsonStringPasswordRequest = Encoding.ASCII.GetString(receivePasswordRequest, 0, passwordRequestReceived);
             string encodingStringPasswordRequest = JsonConvert.DeserializeObject(jsonStringPasswordRequest).ToString();
             //Console.WriteLine(encodingStringPasswordRequest);
-            if (encodingStringPasswordRequest.ToLower().Equals("\nuser doesn't exist."))
+            if (encodingStringPasswordRequest.ToLower().Equals("user doesn't exist."))
             {
                 notLoggedInFlag = true;
             }
+
+            return encodingStringPasswordRequest;
         }
 
         private static void enterPassword(string password)
