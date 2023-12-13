@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace Client
 {
-    public interface IClientSocket
+    public interface IRealClientSocket
     {
         int Send(byte[] buffer);
         int Receive(byte[] buffer);
