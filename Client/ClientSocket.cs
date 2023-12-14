@@ -11,13 +11,17 @@ namespace Client
 {
     public class ClientSocket
     {
-        private static bool isLoggedIn = false;
+        private  bool isLoggedIn = false;
         private static bool isOnline = false;
         private static bool continueListening = true;
         private static Socket sender;
         private static bool notLoggedInFlag = false;
-
         private readonly IRealClientSocket _client;
+
+        public bool IsLoggedIn
+        {
+            get { return isLoggedIn; }
+        }
 
         public ClientSocket(IRealClientSocket client)
         {
@@ -29,26 +33,19 @@ namespace Client
             IPHostEntry ipHost = Dns.GetHostEntry(Dns.GetHostName());
             IPAddress ipAddress = ipHost.AddressList[0];
             IPEndPoint localEndpoint = new IPEndPoint(ipAddress, 11111);
-            Socket socket = new Socket(ipAddress.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
+            sender = new Socket(ipAddress.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
 
-            IRealClientSocket realSocketClient = new RealClientSocket(socket);
+            IRealClientSocket realSocketClient = new RealClientSocket(sender);
             ClientSocket clientSocket = new ClientSocket(realSocketClient);
 
 
-            clientSocket.ExecuteClient();
+            clientSocket.ExecuteClient(sender, localEndpoint);
         }
 
-        void ExecuteClient()
+        void ExecuteClient(Socket sender, IPEndPoint localEndpoint)
         {
             try
             {
-                //For now I don't know how to move it to config file.
-                IPHostEntry ipHost = Dns.GetHostEntry(Dns.GetHostName());
-                IPAddress ipAddress = ipHost.AddressList[0];
-                IPEndPoint localEndpoint = new IPEndPoint(ipAddress, 11111);
-
-                sender = new Socket(ipAddress.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
-
                 try
                 {
                     sender.Connect(localEndpoint);

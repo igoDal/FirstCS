@@ -44,15 +44,10 @@ namespace Server
             IRealServerSocket realServerSocket = new RealServerSocket(listener);
             ServerSocket serverSocket = new ServerSocket(realServerSocket);
 
-            serverSocket.ExecuteServer();
+            serverSocket.ExecuteServer(listener, localEndPoint);
         }
-        public void ExecuteServer()
+        public void ExecuteServer(Socket listener, IPEndPoint localEndPoint)
         {
-            IPHostEntry ipHost = Dns.GetHostEntry(Dns.GetHostName());
-            IPAddress ipAddress = ipHost.AddressList[0];
-            IPEndPoint localEndPoint = new IPEndPoint(ipAddress, 11111);
-            Socket listener = new Socket(ipAddress.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
-
             try
             {
                 listener.Bind(localEndPoint);
