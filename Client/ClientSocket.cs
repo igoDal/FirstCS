@@ -63,7 +63,7 @@ namespace Client
                             
                             byte[] initialCommand = new byte[1024];
 
-                            int initComm = sender.Receive(initialCommand);
+                            int initComm = _client.Receive(initialCommand);
 
                             string jsonInitComm = Encoding.ASCII.GetString(initialCommand, 0, initComm);
                             string encodingInitComm = JsonConvert.DeserializeObject(jsonInitComm).ToString();
@@ -127,16 +127,28 @@ namespace Client
             defaultMessage(command);
         }
 
-        private void sendMessage(string command)
+        public void sendMessage(string command)
         {
             //Call sendMessage method on server side
             string jsonCommand = JsonConvert.SerializeObject(command);
             byte[] msgCommand = Encoding.ASCII.GetBytes(jsonCommand);
-            int byteSent = sender.Send(msgCommand);
+            int byteSent = _client.Send(msgCommand);
             byte[] msgReceived = new byte[1024];
-            int byteRcvd = sender.Receive(msgReceived);
+            int byteRcvd = _client.Receive(msgReceived);
             string jsonString = Encoding.ASCII.GetString(msgReceived, 0, byteRcvd);
-            string encodingString = JsonConvert.DeserializeObject(jsonString).ToString();
+            //string encodingString = JsonConvert.DeserializeObject(jsonString).ToString();
+            string encodingString;
+            try
+            {
+                // Try to parse JSON and return the value
+                var deserializedObject = JsonConvert.DeserializeObject(jsonString);
+                encodingString = deserializedObject.ToString();
+            }
+            catch (JsonReaderException)
+            {
+                // If it's not JSON, return the plain string
+                return;
+            }
 
             Console.WriteLine(encodingString);
             
@@ -144,11 +156,11 @@ namespace Client
             string userToSend = Console.ReadLine();
             string jsonUserToSend= JsonConvert.SerializeObject(userToSend);
             byte[] usernameSent = Encoding.ASCII.GetBytes(jsonUserToSend);
-            int byteUserToSend = sender.Send(usernameSent);
+            int byteUserToSend = _client.Send(usernameSent);
 
             byte[] userToSendReceived = new byte[1024];
 
-            int byteUserRcvd = sender.Receive(userToSendReceived);
+            int byteUserRcvd = _client.Receive(userToSendReceived);
             string jsonUserString = Encoding.ASCII.GetString(userToSendReceived, 0, byteUserRcvd);
             string encodingUserString = JsonConvert.DeserializeObject(jsonUserString).ToString();
             Console.WriteLine(encodingUserString);
@@ -161,10 +173,10 @@ namespace Client
             }
             string jsonMessage = JsonConvert.SerializeObject(message);
             byte[] messageToSend = Encoding.ASCII.GetBytes(jsonMessage);
-            int byteMessageSent = sender.Send(messageToSend);
+            int byteMessageSent = _client.Send(messageToSend);
 
             byte[] messageReceived = new byte[1024];
-            int byteMessageRcvd = sender.Receive(messageReceived);
+            int byteMessageRcvd = _client.Receive(messageReceived);
             string jsonStringMessage = Encoding.ASCII.GetString(messageReceived, 0, byteMessageRcvd);
             string encodingStringMessage = JsonConvert.DeserializeObject(jsonStringMessage).ToString();
             Console.WriteLine(encodingStringMessage);
@@ -199,11 +211,11 @@ namespace Client
             string jsonCommand = JsonConvert.SerializeObject(command);
             byte[] messageSent = Encoding.ASCII.GetBytes(jsonCommand);
 
-            int byteSent = sender.Send(messageSent);
+            int byteSent = _client.Send(messageSent);
 
             byte[] messageReceived = new byte[1024];
 
-            int byteRcvd = sender.Receive(messageReceived);
+            int byteRcvd = _client.Receive(messageReceived);
             string jsonString = Encoding.ASCII.GetString(messageReceived, 0, byteRcvd);
             string encodingString = JsonConvert.DeserializeObject(jsonString).ToString();
             Console.WriteLine(encodingString);
@@ -214,7 +226,7 @@ namespace Client
             string jsonCommand = JsonConvert.SerializeObject(command);
             byte[] messageSent = Encoding.ASCII.GetBytes(jsonCommand);
 
-            sender.Send(messageSent);
+            _client.Send(messageSent);
             sender.Shutdown(SocketShutdown.Both);
             sender.Close();
 
@@ -245,7 +257,7 @@ namespace Client
             }
             
             byte[] receiveLoginAnswer = new byte[1024];
-            int loginAnswerReceived = sender.Receive(receiveLoginAnswer);
+            int loginAnswerReceived = _client.Receive(receiveLoginAnswer);
             string jsonLoginAnswer = Encoding.ASCII.GetString(receiveLoginAnswer, 0, loginAnswerReceived);
             string encodingLoginAnswer = JsonConvert.DeserializeObject(jsonLoginAnswer).ToString();
 
@@ -270,11 +282,11 @@ namespace Client
         {
             string jsonCommand = JsonConvert.SerializeObject(command);
             byte[] messageSent = Encoding.ASCII.GetBytes(jsonCommand);
-            int byteSent = sender.Send(messageSent);
+            int byteSent = _client.Send(messageSent);
 
             byte[] messageReceived = new byte[1024];
 
-            int byteRcvd = sender.Receive(messageReceived);
+            int byteRcvd = _client.Receive(messageReceived);
             string jsonString = Encoding.ASCII.GetString(messageReceived, 0, byteRcvd);
             string encodingString = JsonConvert.DeserializeObject(jsonString).ToString();
 
@@ -306,7 +318,7 @@ namespace Client
             string password = Console.ReadLine();
             enterPassword(password);
             byte[] messageReceivedPass = new byte[1024];
-            int byteRcvdPass = sender.Receive(messageReceivedPass);
+            int byteRcvdPass = _client.Receive(messageReceivedPass);
             string jsonStringpass = Encoding.ASCII.GetString(messageReceivedPass, 0, byteRcvdPass);
             string encodingStringpass = JsonConvert.DeserializeObject(jsonStringpass).ToString();
             Console.WriteLine(encodingStringpass);
@@ -316,27 +328,49 @@ namespace Client
         {
             string jsonCommand = JsonConvert.SerializeObject(command);
             byte[] messageSentUsername = Encoding.ASCII.GetBytes(jsonCommand);
-            sender.Send(messageSentUsername);
+            _client.Send(messageSentUsername);
             byte[] messageReceivedUser = new byte[1024];
-            int byteRcvdUser = sender.Receive(messageReceivedUser);
+            int byteRcvdUser = _client.Receive(messageReceivedUser);
             string jsonString = Encoding.ASCII.GetString(messageReceivedUser, 0, byteRcvdUser);
-            string encodingString = JsonConvert.DeserializeObject(jsonString).ToString();
-            return encodingString;
+            //string encodingString = JsonConvert.DeserializeObject(jsonString).ToString();
+            try
+            {
+                // Try to parse JSON and return the value
+                var deserializedObject = JsonConvert.DeserializeObject(jsonString);
+                return deserializedObject.ToString();
+            }
+            catch (JsonReaderException)
+            {
+                // If it's not JSON, return the plain string
+                return jsonString;
+            }
         }
 
         private void enterUsername(string username)
         {
             string jsonSendUsername = JsonConvert.SerializeObject(username);
             byte[] sendUsername = Encoding.ASCII.GetBytes(jsonSendUsername);
-            sender.Send(sendUsername);
+            _client.Send(sendUsername);
         }
 
         private string passwordRequest()
         {
             byte[] receivePasswordRequest = new byte[1024];
-            int passwordRequestReceived = sender.Receive(receivePasswordRequest);
+            int passwordRequestReceived = _client.Receive(receivePasswordRequest);
             string jsonStringPasswordRequest = Encoding.ASCII.GetString(receivePasswordRequest, 0, passwordRequestReceived);
-            string encodingStringPasswordRequest = JsonConvert.DeserializeObject(jsonStringPasswordRequest).ToString();
+            //string encodingStringPasswordRequest = JsonConvert.DeserializeObject(jsonStringPasswordRequest).ToString();
+            string encodingStringPasswordRequest;
+            try
+            {
+                // Try to parse JSON and return the value
+                var deserializedObject = JsonConvert.DeserializeObject(jsonStringPasswordRequest);
+                encodingStringPasswordRequest =  deserializedObject.ToString();
+            }
+            catch (JsonReaderException)
+            {
+                // If it's not JSON, return the plain string
+                encodingStringPasswordRequest = jsonStringPasswordRequest;
+            }
             //Console.WriteLine(encodingStringPasswordRequest);
             if (encodingStringPasswordRequest.ToLower().Equals("user doesn't exist."))
             {
@@ -350,7 +384,7 @@ namespace Client
         {
             string jsonSendPassword = JsonConvert.SerializeObject(password);
             byte[] sendPassword = Encoding.ASCII.GetBytes(jsonSendPassword);
-            sender.Send(sendPassword);
+            _client.Send(sendPassword);
         }
     }
 }
