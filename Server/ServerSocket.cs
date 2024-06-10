@@ -32,9 +32,10 @@ namespace Server
 
         private readonly IRealServerSocket _realServerSocket;
 
-        public ServerSocket(IRealServerSocket realServerSocket)
+        public ServerSocket(IRealServerSocket realServerSocket, IFileSystem fileSystem)
         {
             _realServerSocket = realServerSocket;
+            _fileSystem = fileSystem;
         }
 
         static void Main(string[] args)
@@ -45,7 +46,10 @@ namespace Server
             Socket listener = new Socket(ipAddress.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
 
             IRealServerSocket realServerSocket = new RealServerSocket(listener);
-            ServerSocket serverSocket = new ServerSocket(realServerSocket);
+            IFileSystem fileSystem = new FileSystem();
+
+
+            ServerSocket serverSocket = new ServerSocket(realServerSocket, fileSystem);
 
             serverSocket.ExecuteServer(listener, localEndPoint);
         }
@@ -161,14 +165,14 @@ namespace Server
             var file = $"{loggedInUser}_msg.txt";
             string readMessage = null;
             IEnumerable<string> lines = null;
-            if (File.Exists(file))
+            if (_fileSystem.File.Exists(file))
             {
-                using (StreamReader reader = File.OpenText(file))
+                using (StreamReader reader = _fileSystem.File.OpenText(file))
                 {
                     if (!reader.EndOfStream)
                     {
                         readMessage = reader.ReadLine();
-                        lines = File.ReadAllLines(file);
+                        lines = _fileSystem.File.ReadAllLines(file);
                     }
                     else
                     {
@@ -180,7 +184,7 @@ namespace Server
                     string jsonReadMsg = JsonConvert.SerializeObject(readMessage);
                     byte[] readMsgBytes = Encoding.ASCII.GetBytes(jsonReadMsg);
                     clientSocket.Send(readMsgBytes);
-                    File.WriteAllLines(file, lines.Skip(1));
+                    _fileSystem.File.WriteAllLines(file, lines.Skip(1));
                 }
                 else
                 {
@@ -211,10 +215,10 @@ namespace Server
             string username = JsonConvert.DeserializeObject(jsonUsername).ToString();
             var file = $"{username}.json";
             var msgFile = $"{username}_msg.txt";
-            if (File.Exists(file))
+            if (_fileSystem.File.Exists(file))
             {
 
-                if (!File.Exists($"{username}_msg.txt"))
+                if (!_fileSystem.File.Exists($"{username}_msg.txt"))
                 {
                     using (StreamWriter sw = new StreamWriter(msgFile))
                     {
@@ -239,7 +243,7 @@ namespace Server
 
                 if (count < 5)
                 {
-                    File.AppendAllText($"{username}_msg.txt", passMsg + "\n");
+                    _fileSystem.File.AppendAllText($"{username}_msg.txt", passMsg + "\n");
 
                     string jsonConfirmMsg = JsonConvert.SerializeObject("Message has been sent.");
                     byte[] confirmMsg = Encoding.ASCII.GetBytes(jsonConfirmMsg);
@@ -278,12 +282,12 @@ namespace Server
 
                 var file = $"{username}.json";
 
-                if (File.Exists(file))
+                if (_fileSystem.File.Exists(file))
                 {
 
                     using (StreamReader reader = new StreamReader(file))
                     {
-                        var fileRead = File.ReadAllText(file);
+                        var fileRead = _fileSystem.File.ReadAllText(file);
                         singleUserData = JsonConvert.DeserializeObject<User>(fileRead);
                     }
                     string getPassword = singleUserData.Password;
@@ -310,7 +314,7 @@ namespace Server
                 User singleUserData = null;
                 using (StreamReader reader = new StreamReader(file))
                 {
-                    var fileRead = File.ReadAllText(file);
+                    var fileRead = _fileSystem.File.ReadAllText(file);
                     singleUserData = JsonConvert.DeserializeObject<User>(fileRead);
                 }
                 
@@ -347,9 +351,9 @@ namespace Server
             }
             var file = $"{username}.json";
 
-            if (File.Exists(file))
+            if (_fileSystem.File.Exists(file))
             {
-                var fileRead = File.ReadAllText(file);
+                var fileRead = _fileSystem.File.ReadAllText(file);
                 jsonMsg = JsonConvert.SerializeObject($"Enter password:");
                 message = Encoding.ASCII.GetBytes(jsonMsg);
                 _realServerSocket.Send(message);
@@ -427,7 +431,7 @@ namespace Server
                 username =  jsonUsername;
             }
 
-            if (!File.Exists($"{username}.json"))
+            if (!_fileSystem.File.Exists($"{username}.json"))
             {
                 jsonMsg = JsonConvert.SerializeObject($"Enter password:");
                 message = Encoding.ASCII.GetBytes(jsonMsg);
@@ -453,7 +457,7 @@ namespace Server
                     Role = "user"
                 };
 
-                using (StreamWriter file = File.CreateText($"{username}.json"))
+                using (StreamWriter file = _fileSystem.File.CreateText($"{username}.json"))
                 {
                     JsonSerializer serializer = new JsonSerializer();
                     serializer.Serialize(file, user);
@@ -474,8 +478,8 @@ namespace Server
         {
             Console.WriteLine("Enter user (username) to delete: ");
             string username = Console.ReadLine();
-            if (File.Exists($"{username}.txt"))
-                File.Delete($"{username}.txt");
+            if (_fileSystem.File.Exists($"{username}.txt"))
+                _fileSystem.File.Delete($"{username}.txt");
 
             jsonMsg = JsonConvert.SerializeObject($"User {username} has been removed.");
             byte[] message = Encoding.ASCII.GetBytes(jsonMsg);
