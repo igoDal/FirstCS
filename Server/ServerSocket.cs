@@ -7,7 +7,6 @@ using System.Collections.Specialized;
 using System.IO;
 using Newtonsoft.Json;
 using System.Collections.Generic;
-using System.IO.Abstractions;
 using Newtonsoft.Json.Linq;
 using System.Linq;
 
@@ -18,43 +17,27 @@ namespace Server
         private static Socket clientSocket;
         private readonly static string serverVersion = "0.0.3";
         private readonly static DateTime serverCreationDate = DateTime.Now;
-        private static byte[] message;
-        private static string jsonMsg;
-        private static readonly byte[] bytes = new byte[1024];
-        private static readonly byte[] bytesU = new byte[1024];
-        private static readonly byte[] bytesP = new byte[1024];
-        private static bool loggedIn = false;
-        private static bool stopped = false;
-        private static string currentRole;
-        private static string loggedInUser;
-        private readonly IFileSystem _fileSystem;
-
-
-        private readonly IRealServerSocket _realServerSocket;
-
-        public ServerSocket(IRealServerSocket realServerSocket, IFileSystem fileSystem)
-        {
-            _realServerSocket = realServerSocket;
-            _fileSystem = fileSystem;
-        }
+        private byte[] message;
+        private string jsonMsg;
+        private readonly byte[] bytes = new byte[1024];
+        private readonly byte[] bytesU = new byte[1024];
+        private readonly byte[] bytesP = new byte[1024];
+        private bool loggedIn = false;
+        private bool stopped = false;
+        private string currentRole;
+        private string loggedInUser;
 
         static void Main(string[] args)
+        {
+            new ServerSocket().ExecuteServer();
+        }
+        public void ExecuteServer()
         {
             IPHostEntry ipHost = Dns.GetHostEntry(Dns.GetHostName());
             IPAddress ipAddress = ipHost.AddressList[0];
             IPEndPoint localEndPoint = new IPEndPoint(ipAddress, 11111);
             Socket listener = new Socket(ipAddress.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
 
-            IRealServerSocket realServerSocket = new RealServerSocket(listener);
-            IFileSystem fileSystem = new FileSystem();
-
-
-            ServerSocket serverSocket = new ServerSocket(realServerSocket, fileSystem);
-
-            serverSocket.ExecuteServer(listener, localEndPoint);
-        }
-        public void ExecuteServer(Socket listener, IPEndPoint localEndPoint)
-        {
             try
             {
                 listener.Bind(localEndPoint);
@@ -165,14 +148,14 @@ namespace Server
             var file = $"{loggedInUser}_msg.txt";
             string readMessage = null;
             IEnumerable<string> lines = null;
-            if (_fileSystem.File.Exists(file))
+            if (File.Exists(file))
             {
-                using (StreamReader reader = _fileSystem.File.OpenText(file))
+                using (StreamReader reader = File.OpenText(file))
                 {
                     if (!reader.EndOfStream)
                     {
                         readMessage = reader.ReadLine();
-                        lines = _fileSystem.File.ReadAllLines(file);
+                        lines = File.ReadAllLines(file);
                     }
                     else
                     {
@@ -184,7 +167,7 @@ namespace Server
                     string jsonReadMsg = JsonConvert.SerializeObject(readMessage);
                     byte[] readMsgBytes = Encoding.ASCII.GetBytes(jsonReadMsg);
                     clientSocket.Send(readMsgBytes);
-                    _fileSystem.File.WriteAllLines(file, lines.Skip(1));
+                    File.WriteAllLines(file, lines.Skip(1));
                 }
                 else
                 {
@@ -215,10 +198,10 @@ namespace Server
             string username = JsonConvert.DeserializeObject(jsonUsername).ToString();
             var file = $"{username}.json";
             var msgFile = $"{username}_msg.txt";
-            if (_fileSystem.File.Exists(file))
+            if (File.Exists(file))
             {
 
-                if (!_fileSystem.File.Exists($"{username}_msg.txt"))
+                if (!File.Exists($"{username}_msg.txt"))
                 {
                     using (StreamWriter sw = new StreamWriter(msgFile))
                     {
@@ -243,7 +226,7 @@ namespace Server
 
                 if (count < 5)
                 {
-                    _fileSystem.File.AppendAllText($"{username}_msg.txt", passMsg + "\n");
+                    File.AppendAllText($"{username}_msg.txt", passMsg + "\n");
 
                     string jsonConfirmMsg = JsonConvert.SerializeObject("Message has been sent.");
                     byte[] confirmMsg = Encoding.ASCII.GetBytes(jsonConfirmMsg);
@@ -282,12 +265,12 @@ namespace Server
 
                 var file = $"{username}.json";
 
-                if (_fileSystem.File.Exists(file))
+                if (File.Exists(file))
                 {
 
                     using (StreamReader reader = new StreamReader(file))
                     {
-                        var fileRead = _fileSystem.File.ReadAllText(file);
+                        var fileRead = File.ReadAllText(file);
                         singleUserData = JsonConvert.DeserializeObject<User>(fileRead);
                     }
                     string getPassword = singleUserData.Password;
@@ -314,7 +297,7 @@ namespace Server
                 User singleUserData = null;
                 using (StreamReader reader = new StreamReader(file))
                 {
-                    var fileRead = _fileSystem.File.ReadAllText(file);
+                    var fileRead = File.ReadAllText(file);
                     singleUserData = JsonConvert.DeserializeObject<User>(fileRead);
                 }
                 
@@ -330,47 +313,30 @@ namespace Server
             }
         }
 
-        public void login()
+        private void login()
         {
             jsonMsg = JsonConvert.SerializeObject($"Enter username:");
             message = Encoding.ASCII.GetBytes(jsonMsg);
-            _realServerSocket.Send(message);
+            clientSocket.Send(message);
 
             string username;
             string password;
-            int numByte = _realServerSocket.Receive(bytesU);
+            int numByte = clientSocket.Receive(bytesU);
             string jsonUsername = Encoding.ASCII.GetString(bytesU, 0, numByte);
-            //username = JsonConvert.DeserializeObject(jsonUsername).ToString();
-            try
-            {
-                username = JsonConvert.DeserializeObject(jsonUsername).ToString();
-            }
-            catch (JsonReaderException)
-            {
-                username =  jsonUsername;
-            }
+            username = JsonConvert.DeserializeObject(jsonUsername).ToString();
             var file = $"{username}.json";
 
-            if (_fileSystem.File.Exists(file))
+            if (File.Exists(file))
             {
-                var fileRead = _fileSystem.File.ReadAllText(file);
+                var fileRead = File.ReadAllText(file);
                 jsonMsg = JsonConvert.SerializeObject($"Enter password:");
                 message = Encoding.ASCII.GetBytes(jsonMsg);
-                _realServerSocket.Send(message);
+                clientSocket.Send(message);
 
                 JsonReader line;
-                int numBytePassword = _realServerSocket.Receive(bytesP);
+                int numBytePassword = clientSocket.Receive(bytesP);
                 string jsonPassword = Encoding.ASCII.GetString(bytesP, 0, numBytePassword);
                 password = JsonConvert.DeserializeObject(jsonPassword).ToString();
-                
-                try
-                {
-                    password = JsonConvert.DeserializeObject(jsonPassword).ToString();
-                }
-                catch (JsonReaderException)
-                {
-                    password =  jsonPassword;
-                }
 
                 var singleUserData = JsonConvert.DeserializeObject<User>(fileRead);
                 string getPassword = singleUserData.Password;
@@ -385,20 +351,20 @@ namespace Server
                     loggedIn = true;
                     jsonMsg = JsonConvert.SerializeObject($"loggedIn");
                     message = Encoding.ASCII.GetBytes(jsonMsg);
-                    _realServerSocket.Send(message);
+                    clientSocket.Send(message);
                 }
                 else
                 {
                     jsonMsg = JsonConvert.SerializeObject($"Incorrect password!");
                     message = Encoding.ASCII.GetBytes(jsonMsg);
-                    _realServerSocket.Send(message);
+                    clientSocket.Send(message);
                 }
             }
             else
             {
                 jsonMsg = JsonConvert.SerializeObject($"user doesn't exist.");
                 message = Encoding.ASCII.GetBytes(jsonMsg);
-                _realServerSocket.Send(message);
+                clientSocket.Send(message);
             }
         }
 
@@ -411,43 +377,27 @@ namespace Server
             clientSocket.Send(message);
         }
 
-        public void addUser()
+        private void addUser()
         {
             jsonMsg = JsonConvert.SerializeObject($"Enter username:");
             message = Encoding.ASCII.GetBytes(jsonMsg);
-            _realServerSocket.Send(message);
+            clientSocket.Send(message);
 
             string username;
             string password;
-            int numByte = _realServerSocket.Receive(bytesU);
+            int numByte = clientSocket.Receive(bytesU);
             string jsonUsername = Encoding.ASCII.GetString(bytesU, 0, numByte);
-            //username = JsonConvert.DeserializeObject(jsonUsername).ToString();
-            try
-            {
-                username = JsonConvert.DeserializeObject(jsonUsername).ToString();
-            }
-            catch (JsonReaderException)
-            {
-                username =  jsonUsername;
-            }
+            username = JsonConvert.DeserializeObject(jsonUsername).ToString();
 
-            if (!_fileSystem.File.Exists($"{username}.json"))
+            if (!File.Exists($"{username}.json"))
             {
                 jsonMsg = JsonConvert.SerializeObject($"Enter password:");
                 message = Encoding.ASCII.GetBytes(jsonMsg);
-                _realServerSocket.Send(message);
+                clientSocket.Send(message);
 
-                int numBytePassword = _realServerSocket.Receive(bytesP);
+                int numBytePassword = clientSocket.Receive(bytesP);
                 string jsonPassword = Encoding.ASCII.GetString(bytesP, 0, numBytePassword);
-                //password = JsonConvert.DeserializeObject(jsonPassword).ToString();
-                try
-                {
-                    password = JsonConvert.DeserializeObject(jsonPassword).ToString();
-                }
-                catch (JsonReaderException)
-                {
-                    password =  jsonPassword;
-                }
+                password = JsonConvert.DeserializeObject(jsonPassword).ToString();
 
 
                 User user = new User()
@@ -457,7 +407,7 @@ namespace Server
                     Role = "user"
                 };
 
-                using (StreamWriter file = _fileSystem.File.CreateText($"{username}.json"))
+                using (StreamWriter file = File.CreateText($"{username}.json"))
                 {
                     JsonSerializer serializer = new JsonSerializer();
                     serializer.Serialize(file, user);
@@ -472,14 +422,14 @@ namespace Server
                 jsonMsg = JsonConvert.SerializeObject($"User {username} already exists.");
                 message = Encoding.ASCII.GetBytes(jsonMsg);
             }
-            _realServerSocket.Send(message);
+            clientSocket.Send(message);
         }
         private void deleteUser()
         {
             Console.WriteLine("Enter user (username) to delete: ");
             string username = Console.ReadLine();
-            if (_fileSystem.File.Exists($"{username}.txt"))
-                _fileSystem.File.Delete($"{username}.txt");
+            if (File.Exists($"{username}.txt"))
+                File.Delete($"{username}.txt");
 
             jsonMsg = JsonConvert.SerializeObject($"User {username} has been removed.");
             byte[] message = Encoding.ASCII.GetBytes(jsonMsg);
