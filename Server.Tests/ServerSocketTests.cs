@@ -3,6 +3,7 @@ using System.IO;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
+using System.Threading;
 using Newtonsoft.Json;
 using Server;
 using Xunit;
@@ -11,24 +12,34 @@ namespace Server.Tests
 {
     public class ServerSocketTests : IDisposable
     {
-        private ServerSocket serverSocket;
+        private Thread serverThread;
         private Socket clientSocket;
 
         public ServerSocketTests()
         {
-            serverSocket = new ServerSocket();
+            serverThread = new Thread(StartServer);
+            serverThread.Start();
+            Thread.Sleep(1000); 
+
             clientSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+        }
+
+        private void StartServer()
+        {
+            ServerSocket serverSocket = new ServerSocket();
+            serverSocket.ExecuteServer();
         }
 
         public void Dispose()
         {
             clientSocket.Close();
+            serverThread.Abort();
         }
 
         [Fact]
         public void TestServerCreation()
         {
-            Assert.NotNull(serverSocket);
+            Assert.NotNull(serverThread);
         }
 
         [Fact]
@@ -42,17 +53,15 @@ namespace Server.Tests
             var jsonUsername = JsonConvert.SerializeObject(username);
             var jsonPassword = JsonConvert.SerializeObject(password);
 
-            clientSocket.Connect(IPAddress.Loopback, 11111);
-            clientSocket.Send(Encoding.ASCII.GetBytes(jsonUsername));
-            clientSocket.Send(Encoding.ASCII.GetBytes(jsonPassword));
+            ConnectClient();
+            SendData(clientSocket, jsonUsername);
+            SendData(clientSocket, jsonPassword);
 
-            byte[] responseBytes = new byte[1024];
-            int numByte = clientSocket.Receive(responseBytes);
-            string response = Encoding.ASCII.GetString(responseBytes, 0, numByte);
+            string response = ReceiveData(clientSocket);
 
             Assert.Equal("loggedIn", JsonConvert.DeserializeObject<string>(response));
 
-            File.Delete($"{username}.json");
+            File.Delete($"{username}.json"); 
         }
 
         [Fact]
@@ -63,17 +72,36 @@ namespace Server.Tests
             var jsonUsername = JsonConvert.SerializeObject(username);
             var jsonPassword = JsonConvert.SerializeObject(password);
 
-            clientSocket.Connect(IPAddress.Loopback, 11111);
-            clientSocket.Send(Encoding.ASCII.GetBytes(jsonUsername));
-            clientSocket.Send(Encoding.ASCII.GetBytes(jsonPassword));
+            ConnectClient();
+            SendData(clientSocket, jsonUsername);
+            SendData(clientSocket, jsonPassword);
 
-            byte[] responseBytes = new byte[1024];
-            int numByte = clientSocket.Receive(responseBytes);
-            string response = Encoding.ASCII.GetString(responseBytes, 0, numByte);
+            string response = ReceiveData(clientSocket);
 
             Assert.Equal($"User {username} has been added.", JsonConvert.DeserializeObject<string>(response));
 
-            File.Delete($"{username}.json");
+            File.Delete($"{username}.json"); 
+        }
+
+        private void ConnectClient()
+        {
+            if (!clientSocket.Connected)
+            {
+                clientSocket.Connect(IPAddress.Loopback, 11111);
+            }
+        }
+
+        private void SendData(Socket socket, string data)
+        {
+            byte[] message = Encoding.ASCII.GetBytes(data);
+            socket.Send(message);
+        }
+
+        private string ReceiveData(Socket socket)
+        {
+            byte[] buffer = new byte[1024];
+            int bytesReceived = socket.Receive(buffer);
+            return Encoding.ASCII.GetString(buffer, 0, bytesReceived);
         }
 
     }
