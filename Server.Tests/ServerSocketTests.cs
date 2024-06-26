@@ -105,4 +105,25 @@ namespace Server.Tests
         }
 
     }
+    
+    public class MockSocket : Socket
+    {
+        public byte[] SentData { get; private set; }
+
+        public MockSocket() : base(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp)
+        {
+        }
+
+        public override int Send(byte[] buffer)
+        {
+            SentData = buffer;
+            return buffer.Length;
+        }
+
+        public override int Send(byte[] buffer, SocketFlags socketFlags)
+        {
+            SentData = buffer;
+            return buffer.Length;
+        }
+    }
 }
