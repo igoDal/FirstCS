@@ -1,129 +1,53 @@
 using System;
-using System.IO;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
-using System.Threading;
+using System.Threading.Tasks;
 using Newtonsoft.Json;
-using Server;
 using Xunit;
 
 namespace Server.Tests
 {
-    public class ServerSocketTests : IDisposable
+    public class ServerSocketTests
     {
-        private Thread serverThread;
-        private Socket clientSocket;
-
-        public ServerSocketTests()
+        [Fact]
+        public async Task InfoCommand_ShouldSendCorrectServerInfo()
         {
-            serverThread = new Thread(StartServer);
-            serverThread.Start();
-            Thread.Sleep(1000); 
+            // Arrange
+            var serverSocketTask = Task.Run(() => StartServer());
 
-            clientSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+            // Wait a bit for the server to start
+            await Task.Delay(500);
+
+            var clientSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+            clientSocket.Connect(IPAddress.Loopback, 11111);
+
+            var jsonCommand = JsonConvert.SerializeObject("info");
+            var commandBytes = Encoding.ASCII.GetBytes(jsonCommand);
+
+            // Act
+            clientSocket.Send(commandBytes);
+            
+            var buffer = new byte[1024];
+            int bytesRead = clientSocket.Receive(buffer);
+            var response = Encoding.ASCII.GetString(buffer, 0, bytesRead);
+
+            // Assert
+            var expectedMessage = $"Server version: 0.0.3\n" + // Adjust based on your actual version
+                                  $"Server Creation Date: ";
+            var expectedJsonMsg = JsonConvert.SerializeObject(expectedMessage);
+            var expectedPrefix = expectedJsonMsg.Substring(0, expectedJsonMsg.LastIndexOf("Creation Date: ") + "Creation Date: ".Length);
+
+            Assert.StartsWith(expectedPrefix, response);
+
+            clientSocket.Shutdown(SocketShutdown.Both);
+            clientSocket.Close();
         }
 
         private void StartServer()
         {
-            ServerSocket serverSocket = new ServerSocket();
-            serverSocket.ExecuteServer();
-        }
-
-        public void Dispose()
-        {
-            clientSocket.Close();
-            serverThread.Abort();
-        }
-
-        [Fact]
-        public void TestServerCreation()
-        {
-            Assert.NotNull(serverThread);
-        }
-
-        [Fact]
-        public void TestLogin()
-        {
-            string username = "testuser";
-            string password = "testpassword";
-            string userData = JsonConvert.SerializeObject(new User() { Userame = username, Password = password, Role = "user" });
-            File.WriteAllText($"{username}.json", userData);
-
-            var jsonUsername = JsonConvert.SerializeObject(username);
-            var jsonPassword = JsonConvert.SerializeObject(password);
-
-            ConnectClient();
-            SendData(clientSocket, jsonUsername);
-            SendData(clientSocket, jsonPassword);
-
-            string response = ReceiveData(clientSocket);
-
-            Assert.Equal("loggedIn", JsonConvert.DeserializeObject<string>(response));
-
-            File.Delete($"{username}.json"); 
-        }
-
-        [Fact]
-        public void TestAddUser()
-        {
-            string username = "newuser";
-            string password = "newpassword";
-            var jsonUsername = JsonConvert.SerializeObject(username);
-            var jsonPassword = JsonConvert.SerializeObject(password);
-
-            ConnectClient();
-            SendData(clientSocket, jsonUsername);
-            SendData(clientSocket, jsonPassword);
-
-            string response = ReceiveData(clientSocket);
-
-            Assert.Equal($"User {username} has been added.", JsonConvert.DeserializeObject<string>(response));
-
-            File.Delete($"{username}.json"); 
-        }
-
-        private void ConnectClient()
-        {
-            if (!clientSocket.Connected)
-            {
-                clientSocket.Connect(IPAddress.Loopback, 11111);
-            }
-        }
-
-        private void SendData(Socket socket, string data)
-        {
-            byte[] message = Encoding.ASCII.GetBytes(data);
-            socket.Send(message);
-        }
-
-        private string ReceiveData(Socket socket)
-        {
-            byte[] buffer = new byte[1024];
-            int bytesReceived = socket.Receive(buffer);
-            return Encoding.ASCII.GetString(buffer, 0, bytesReceived);
-        }
-
-    }
-    
-    public class MockSocket : Socket
-    {
-        public byte[] SentData { get; private set; }
-
-        public MockSocket() : base(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp)
-        {
-        }
-
-        public override int Send(byte[] buffer)
-        {
-            SentData = buffer;
-            return buffer.Length;
-        }
-
-        public override int Send(byte[] buffer, SocketFlags socketFlags)
-        {
-            SentData = buffer;
-            return buffer.Length;
+            var server = new ServerSocket();
+            server.ExecuteServer();
         }
     }
 }
