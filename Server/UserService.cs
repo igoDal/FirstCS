@@ -4,6 +4,8 @@ using Newtonsoft.Json;
 namespace Server;
 public class UserService
 {
+    private string currentRole;
+    private string loggedInUser;
     public string AddUser(string username, string password)
     {
         if (File.Exists($"{username}.json"))
@@ -25,5 +27,30 @@ public class UserService
         }
 
         return $"User {username} has been added.";
+    }
+    public (bool, string) Login(string username, string password)
+    {
+        var file = $"{username}.json";
+        if (File.Exists(file))
+        {
+            var fileRead = File.ReadAllText(file);
+            var singleUserData = JsonConvert.DeserializeObject<User>(fileRead);
+            string getPassword = singleUserData.Password;
+            currentRole = singleUserData.Role;
+            loggedInUser = singleUserData.Userame;
+
+            if (getPassword.Equals(password))
+            {
+                return (true, "loggedIn");
+            }
+            else
+            {
+                return (false, "Incorrect password!");
+            }
+        }
+        else
+        {
+            return (false, "User doesn't exist.");
+        }
     }
 }
