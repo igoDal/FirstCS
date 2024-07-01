@@ -26,7 +26,14 @@ namespace Server
         private bool stopped = false;
         private string currentRole;
         private string loggedInUser;
+        
+        private readonly UserService userService;
 
+        public ServerSocket()
+        {
+            userService = new UserService();
+        }
+        
         static void Main(string[] args)
         {
             new ServerSocket().ExecuteServer();
@@ -377,7 +384,7 @@ namespace Server
             clientSocket.Send(message);
         }
 
-        private void addUser()
+        /*private void addUser()
         {
             jsonMsg = JsonConvert.SerializeObject($"Enter username:");
             message = Encoding.ASCII.GetBytes(jsonMsg);
@@ -423,7 +430,35 @@ namespace Server
                 message = Encoding.ASCII.GetBytes(jsonMsg);
             }
             clientSocket.Send(message);
+        }*/
+        
+        private void addUser()
+        {
+            jsonMsg = JsonConvert.SerializeObject($"Enter username:");
+            message = Encoding.ASCII.GetBytes(jsonMsg);
+            clientSocket.Send(message);
+
+            string username;
+            string password;
+            int numByte = clientSocket.Receive(bytesU);
+            string jsonUsername = Encoding.ASCII.GetString(bytesU, 0, numByte);
+            username = JsonConvert.DeserializeObject(jsonUsername).ToString();
+
+            jsonMsg = JsonConvert.SerializeObject($"Enter password:");
+            message = Encoding.ASCII.GetBytes(jsonMsg);
+            clientSocket.Send(message);
+
+            int numBytePassword = clientSocket.Receive(bytesP);
+            string jsonPassword = Encoding.ASCII.GetString(bytesP, 0, numBytePassword);
+            password = JsonConvert.DeserializeObject(jsonPassword).ToString();
+
+            string result = userService.AddUser(username, password);
+
+            jsonMsg = JsonConvert.SerializeObject(result);
+            message = Encoding.ASCII.GetBytes(jsonMsg);
+            clientSocket.Send(message);
         }
+        
         private void deleteUser()
         {
             Console.WriteLine("Enter user (username) to delete: ");
