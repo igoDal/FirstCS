@@ -36,9 +36,109 @@ namespace Server
         
         static void Main(string[] args)
         {
-            new ServerSocket().ExecuteServer();
+            new ServerSocket().StartServer();
         }
-        public void ExecuteServer()
+
+        public void StartServer()
+        {
+            IPHostEntry ipHost = Dns.GetHostEntry(Dns.GetHostName());
+            IPAddress ipAddress = ipHost.AddressList[0];
+            IPEndPoint localEndPoint = new IPEndPoint(ipAddress, 11111);
+            Socket listener = new Socket(ipAddress.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
+            
+            try
+            {
+                listener.Bind(localEndPoint);
+                listener.Listen(10);
+
+                Console.WriteLine("Awaiting connection...");
+                clientSocket = listener.Accept();
+                Console.WriteLine("Connected");
+
+                while (!stopped)
+                {
+                    string firstData = ReceiveData();
+                    if (firstData == null)
+                        break;
+
+                    HandleFirstCommand(firstData.ToLower());
+
+                    while (loggedIn)
+                    {
+                        HandleLoggedInCommands();
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.ToString());
+            }
+            finally
+            {
+                listener.Close();
+            }
+        }
+        
+        private void HandleFirstCommand(string command)
+        {
+            switch (command)
+            {
+                case "login":
+                    Login();
+                    break;
+                case "add":
+                    AddUser();
+                    break;
+                default:
+                    break;
+            }
+        }
+
+        private void HandleLoggedInCommands()
+        {
+            SendData("Enter command (type \"help\" to check available commands): ");
+            string data = ReceiveData()?.ToLower();
+            if (data == null)
+                return;
+
+            var commandActions = new Dictionary<string, Action>
+            {
+                { "add", AddUser },
+                { "user", PrintUserInfo },
+                { "help", HelpCommand },
+                { "info", InfoCommand },
+                { "uptime", UptimeCommand },
+                { "stop", StopCommand },
+                { "logout", Logout },
+                { "delete", DeleteUser },
+                { "msg", SendMessage },
+                { "read", ReadMessage }
+            };
+
+            if (commandActions.ContainsKey(data))
+            {
+                commandActions[data].Invoke();
+            }
+            else
+            {
+                IncorrectCommand();
+            }
+        }
+        private void SendData(string message)
+        {
+            string jsonMsg = JsonConvert.SerializeObject(message);
+            byte[] msg = Encoding.ASCII.GetBytes(jsonMsg);
+            clientSocket.Send(msg);
+        }
+        private string ReceiveData()
+        {
+            byte[] bytes = new byte[1024];
+            string jsonData = null;
+            int numByte = clientSocket.Receive(bytes);
+            jsonData += Encoding.ASCII.GetString(bytes, 0, numByte);
+            return JsonConvert.DeserializeObject(jsonData)?.ToString();
+        }
+        /*public void ExecuteServer()
         {
             IPHostEntry ipHost = Dns.GetHostEntry(Dns.GetHostName());
             IPAddress ipAddress = ipHost.AddressList[0];
@@ -148,9 +248,9 @@ namespace Server
             {
                 listener.Close(); // Close the server socket listener
             }
-        }
+        }*/
 
-        private void readMessage()
+        private void ReadMessage()
         {
             var file = $"{loggedInUser}_msg.txt";
             string readMessage = null;
@@ -191,7 +291,7 @@ namespace Server
             }
         }
 
-        private void sendMessage()
+        private void SendMessage()
         {
             jsonMsg = JsonConvert.SerializeObject($"Enter username:");
             message = Encoding.ASCII.GetBytes(jsonMsg);
@@ -254,7 +354,7 @@ namespace Server
             }
         }
 
-        private void printUserInfo()
+        private void PrintUserInfo()
         {
 
             if (currentRole.ToLower().Equals("admin"))
@@ -320,7 +420,7 @@ namespace Server
             }
         }
 
-        private void login()
+        private void Login()
         {
             jsonMsg = JsonConvert.SerializeObject($"Enter username:");
             message = Encoding.ASCII.GetBytes(jsonMsg);
@@ -375,7 +475,7 @@ namespace Server
             }
         }
 
-        private void logout()
+        private void Logout()
         {
             loggedIn = false;
 
@@ -432,7 +532,7 @@ namespace Server
             clientSocket.Send(message);
         }*/
         
-        private void addUser()
+        private void AddUser()
         {
             jsonMsg = JsonConvert.SerializeObject($"Enter username:");
             message = Encoding.ASCII.GetBytes(jsonMsg);
@@ -459,7 +559,7 @@ namespace Server
             clientSocket.Send(message);
         }
         
-        private void deleteUser()
+        private void DeleteUser()
         {
             Console.WriteLine("Enter user (username) to delete: ");
             string username = Console.ReadLine();
@@ -472,14 +572,14 @@ namespace Server
         }
 
 
-        private void incorrectCommand()
+        private void IncorrectCommand()
         {
             jsonMsg = JsonConvert.SerializeObject($"Incorrect command. Type 'help' to get list of commands.");
             byte[] message = Encoding.ASCII.GetBytes(jsonMsg);
             clientSocket.Send(message);
         }
 
-        private void stopCommand()
+        private void StopCommand()
         {
 
             try
@@ -501,7 +601,7 @@ namespace Server
             }
         }
 
-        private void uptimeCommand()
+        private void UptimeCommand()
         {
             DateTime serverCurrentDate = DateTime.Now;
             jsonMsg = JsonConvert.SerializeObject($"Server is up for {serverCurrentDate - serverCreationDate}");
@@ -509,7 +609,7 @@ namespace Server
             clientSocket.Send(message);
         }
 
-        private void infoCommand()
+        private void InfoCommand()
         {
             jsonMsg = JsonConvert.SerializeObject($"Server version: {serverVersion}\n" +
                                 $"Server Creation Date: {serverCreationDate}");
@@ -517,7 +617,7 @@ namespace Server
             clientSocket.Send(message);
         }
 
-        private void helpCommand()
+        private void HelpCommand()
         {
             jsonMsg = JsonConvert.SerializeObject($"Available commands:\n" +
                                 $"'add' - to add new user\n" +
