@@ -1,53 +1,65 @@
-using System;
-using System.Net;
+using Moq;
+using Xunit;
 using System.Net.Sockets;
 using System.Text;
-using System.Threading.Tasks;
 using Newtonsoft.Json;
-using Xunit;
+using System.Threading.Tasks;
 
 namespace Server.Tests
 {
     public class ServerSocketTests
     {
-        [Fact]
-        public async Task InfoCommand_ShouldSendCorrectServerInfo()
+        private readonly UserService _userService;
+
+        public ServerSocketTests()
         {
-            // Arrange
-            var serverSocketTask = Task.Run(() => StartServer());
-
-            // Wait a bit for the server to start
-            await Task.Delay(500);
-
-            var clientSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-            clientSocket.Connect(IPAddress.Loopback, 11111);
-
-            var jsonCommand = JsonConvert.SerializeObject("info");
-            var commandBytes = Encoding.ASCII.GetBytes(jsonCommand);
-
-            // Act
-            clientSocket.Send(commandBytes);
-            
-            var buffer = new byte[1024];
-            int bytesRead = clientSocket.Receive(buffer);
-            var response = Encoding.ASCII.GetString(buffer, 0, bytesRead);
-
-            // Assert
-            var expectedMessage = $"Server version: 0.0.3\n" + // Adjust based on your actual version
-                                  $"Server Creation Date: ";
-            var expectedJsonMsg = JsonConvert.SerializeObject(expectedMessage);
-            var expectedPrefix = expectedJsonMsg.Substring(0, expectedJsonMsg.LastIndexOf("Creation Date: ") + "Creation Date: ".Length);
-
-            Assert.StartsWith(expectedPrefix, response);
-
-            clientSocket.Shutdown(SocketShutdown.Both);
-            clientSocket.Close();
+            _userService = new UserService();
         }
 
-        private void StartServer()
+        [Fact]
+        public void AddUser_ShouldAddNewUser()
         {
-            var server = new ServerSocket();
-            server.ExecuteServer();
+            // Arrange
+            var username = "testuser";
+            var password = "password123";
+            var expectedFilePath = $"{username}.json";
+
+            // Act
+            var result = _userService.AddUser(username, password);
+
+            // Assert
+            Assert.Equal($"User {username} has been added.", result);
+            Assert.True(File.Exists(expectedFilePath));
+
+            // Cleanup
+            if (File.Exists(expectedFilePath))
+            {
+                File.Delete(expectedFilePath);
+            }
+        }
+
+        [Fact]
+        public void AddUser_ShouldNotAddExistingUser()
+        {
+            // Arrange
+            var username = "existinguser";
+            var password = "password123";
+            var expectedFilePath = $"{username}.json";
+
+            // Add user first time
+            _userService.AddUser(username, password);
+
+            // Act
+            var result = _userService.AddUser(username, password);
+
+            // Assert
+            Assert.Equal($"User {username} already exists.", result);
+
+            // Cleanup
+            if (File.Exists(expectedFilePath))
+            {
+                File.Delete(expectedFilePath);
+            }
         }
     }
 }

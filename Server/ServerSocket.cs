@@ -29,14 +29,16 @@ namespace Server
         
         private readonly UserService userService;
 
-        public ServerSocket()
+        public ServerSocket(UserService userService)
         {
-            userService = new UserService();
+            this.userService = userService;
         }
         
         static void Main(string[] args)
         {
-            new ServerSocket().StartServer();
+            var userService = new UserService();
+            var serverSocket = new ServerSocket(userService);
+            serverSocket.StartServer();
         }
 
         public void StartServer()
@@ -138,118 +140,6 @@ namespace Server
             jsonData += Encoding.ASCII.GetString(bytes, 0, numByte);
             return JsonConvert.DeserializeObject(jsonData)?.ToString();
         }
-        /*public void ExecuteServer()
-        {
-            IPHostEntry ipHost = Dns.GetHostEntry(Dns.GetHostName());
-            IPAddress ipAddress = ipHost.AddressList[0];
-            IPEndPoint localEndPoint = new IPEndPoint(ipAddress, 11111);
-            Socket listener = new Socket(ipAddress.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
-
-            try
-            {
-                listener.Bind(localEndPoint);
-                listener.Listen(10);
-
-                //Below lines were in while loop. Testing if it was correct.
-                //--------------START----------------
-                Console.WriteLine("Awaiting connection...");
-                clientSocket = listener.Accept();
-                Console.WriteLine("Connected");
-                //---------------END-----------------
-
-
-                while (!stopped)
-                {
-
-                    byte[] firstBytes = new byte[1024];
-                    string jsonFirstData = null;
-
-                    int firstNumByte = clientSocket.Receive(firstBytes);
-                    jsonFirstData += Encoding.ASCII.GetString(firstBytes, 0, firstNumByte);
-                    string firstData = JsonConvert.DeserializeObject(jsonFirstData).ToString();
-
-                    if (firstData.ToLower() == "login")
-                    {
-                        login();
-                    }
-                    else if (firstData.ToLower() == "add")
-                    {
-                        addUser();
-                    }
-                    else
-                        break;
-
-                    while (loggedIn)
-                    {
-                        jsonMsg = JsonConvert.SerializeObject($"Enter command (type \"help\" to check available commands): ");
-                        message = Encoding.ASCII.GetBytes(jsonMsg);
-                        clientSocket.Send(message);
-
-                        byte[] bytes = new byte[1024];
-                        string jsonData = null;
-
-                        int numByte = clientSocket.Receive(bytes);
-                        jsonData += Encoding.ASCII.GetString(bytes, 0, numByte);
-                        string data = JsonConvert.DeserializeObject(jsonData).ToString();
-                        Console.WriteLine("Text received -> {0}", data);
-
-                        switch (data.ToLower())
-                        {
-                            case "add":
-                                addUser();
-                                break;
-                            case "user":
-                                printUserInfo();
-                                break;
-                            case "help":
-                                helpCommand();
-                                break;
-
-                            case "info":
-                                infoCommand();
-                                break;
-                            
-                            case "uptime":
-                                uptimeCommand();
-                                break;
-                            
-                            case "stop":
-                                stopCommand();
-                                break;
-
-                            case "logout":
-                                logout();
-                                break;
-
-                            case "delete":
-                                deleteUser();
-                                break;
-
-                            case "msg":
-                                sendMessage();
-                                break;
-
-                            case "read":
-                                readMessage();
-                                break;
-
-                            default:
-                                incorrectCommand(); 
-                                break;
-                        }
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine(ex.ToString());
-            }
-            finally
-            {
-                listener.Close(); // Close the server socket listener
-            }
-        }*/
-
         private void ReadMessage()
         {
             var file = $"{loggedInUser}_msg.txt";
@@ -483,55 +373,6 @@ namespace Server
             byte[] message = Encoding.ASCII.GetBytes(jsonMsg);
             clientSocket.Send(message);
         }
-
-        /*private void addUser()
-        {
-            jsonMsg = JsonConvert.SerializeObject($"Enter username:");
-            message = Encoding.ASCII.GetBytes(jsonMsg);
-            clientSocket.Send(message);
-
-            string username;
-            string password;
-            int numByte = clientSocket.Receive(bytesU);
-            string jsonUsername = Encoding.ASCII.GetString(bytesU, 0, numByte);
-            username = JsonConvert.DeserializeObject(jsonUsername).ToString();
-
-            if (!File.Exists($"{username}.json"))
-            {
-                jsonMsg = JsonConvert.SerializeObject($"Enter password:");
-                message = Encoding.ASCII.GetBytes(jsonMsg);
-                clientSocket.Send(message);
-
-                int numBytePassword = clientSocket.Receive(bytesP);
-                string jsonPassword = Encoding.ASCII.GetString(bytesP, 0, numBytePassword);
-                password = JsonConvert.DeserializeObject(jsonPassword).ToString();
-
-
-                User user = new User()
-                {
-                    Userame = username,
-                    Password = password,
-                    Role = "user"
-                };
-
-                using (StreamWriter file = File.CreateText($"{username}.json"))
-                {
-                    JsonSerializer serializer = new JsonSerializer();
-                    serializer.Serialize(file, user);
-                }
-
-                jsonMsg = JsonConvert.SerializeObject($"User {username} has been added.");
-                message = Encoding.ASCII.GetBytes(jsonMsg);
-            }
-
-            else
-            {
-                jsonMsg = JsonConvert.SerializeObject($"User {username} already exists.");
-                message = Encoding.ASCII.GetBytes(jsonMsg);
-            }
-            clientSocket.Send(message);
-        }*/
-        
         private void AddUser()
         {
             jsonMsg = JsonConvert.SerializeObject($"Enter username:");
@@ -579,7 +420,7 @@ namespace Server
             clientSocket.Send(message);
         }
 
-        private void StopCommand()
+        public void StopCommand()
         {
 
             try
