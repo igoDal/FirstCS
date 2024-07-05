@@ -28,16 +28,20 @@ namespace Server
         private string loggedInUser;
         
         private readonly UserService userService;
+        private readonly MessageService messageService;
+        
 
-        public ServerSocket(UserService userService)
+        public ServerSocket(UserService userService, MessageService messageService)
         {
             this.userService = userService;
+            this.messageService = messageService;
         }
         
         static void Main(string[] args)
         {
             var userService = new UserService();
-            var serverSocket = new ServerSocket(userService);
+            var messageService = new MessageService();
+            var serverSocket = new ServerSocket(userService, messageService);
             serverSocket.StartServer();
         }
 
@@ -55,6 +59,8 @@ namespace Server
 
                 Console.WriteLine("Awaiting connection...");
                 clientSocket = listener.Accept();
+                messageService.SetClientSocket(clientSocket);
+
                 Console.WriteLine("Connected");
 
                 while (!stopped)
@@ -114,7 +120,7 @@ namespace Server
                 { "logout", Logout },
                 { "delete", DeleteUser },
                 { "msg", SendMessage },
-                { "read", ReadMessage }
+                { "read", () => messageService.ReadMessage(loggedInUser) }
             };
 
             if (commandActions.ContainsKey(data))

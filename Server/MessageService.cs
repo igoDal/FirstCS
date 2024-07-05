@@ -10,9 +10,9 @@ namespace Server
 {
     public class MessageService
     {
-        private readonly Socket _clientSocket;
+        private Socket _clientSocket;
 
-        public MessageService(Socket clientSocket)
+        public void SetClientSocket(Socket clientSocket)
         {
             _clientSocket = clientSocket;
         }
