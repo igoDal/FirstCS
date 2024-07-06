@@ -55,12 +55,56 @@ namespace Server
                 SendData("There are no new messages.");
             }
         }
+        
+        public void SendMessage()
+        {
+            SendData("Enter username:");
+            string username = ReceiveData();
+            var file = $"{username}.json";
+            var msgFile = $"{username}_msg.txt";
+
+            if (File.Exists(file))
+            {
+                if (!File.Exists(msgFile))
+                {
+                    using (StreamWriter sw = new StreamWriter(msgFile)) { }
+                }
+
+                SendData("Type your message:");
+                string message = ReceiveData();
+
+                int count = File.ReadAllLines(msgFile).Length;
+
+                if (count < 5)
+                {
+                    File.AppendAllText(msgFile, message + "\n");
+                    SendData("Message has been sent.");
+                }
+                else
+                {
+                    SendData("Mailbox is full.");
+                }
+            }
+            else
+            {
+                SendData("User doesn't exist.");
+            }
+        }
 
         private void SendData(string message)
         {
             string jsonMsg = JsonConvert.SerializeObject(message);
             byte[] msg = Encoding.ASCII.GetBytes(jsonMsg);
             _clientSocket.Send(msg);
+        }
+        
+        private string ReceiveData()
+        {
+            byte[] bytes = new byte[1024];
+            string jsonData = null;
+            int numByte = _clientSocket.Receive(bytes);
+            jsonData += Encoding.ASCII.GetString(bytes, 0, numByte);
+            return JsonConvert.DeserializeObject(jsonData)?.ToString();
         }
     }
 }

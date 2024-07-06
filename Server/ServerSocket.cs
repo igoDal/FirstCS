@@ -119,7 +119,7 @@ namespace Server
                 { "stop", StopCommand },
                 { "logout", Logout },
                 { "delete", DeleteUser },
-                { "msg", SendMessage },
+                { "msg", () => messageService.SendMessage() },
                 { "read", () => messageService.ReadMessage(loggedInUser) }
             };
 
