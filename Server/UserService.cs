@@ -53,4 +53,13 @@ public class UserService
             return (false, "User doesn't exist.");
         }
     }
+    public string GetCurrentRole()
+    {
+        return currentRole;
+    }
+
+    public string GetLoggedInUser()
+    {
+        return loggedInUser;
+    }
 }
