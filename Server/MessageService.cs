@@ -5,10 +5,11 @@ using System.IO;
 using System.Linq;
 using System.Net.Sockets;
 using System.Text;
+using Server.Interfaces;
 
 namespace Server
 {
-    public class MessageService
+    public class MessageService : IMessageService
     {
         private Socket _clientSocket;
 

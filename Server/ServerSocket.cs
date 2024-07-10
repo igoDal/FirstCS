@@ -9,10 +9,11 @@ using Newtonsoft.Json;
 using System.Collections.Generic;
 using Newtonsoft.Json.Linq;
 using System.Linq;
+using Server.Interfaces;
 
 namespace Server
 {
-    public class ServerSocket
+    public class ServerSocket : IServerSocket
     {
         private static Socket clientSocket;
         private readonly static string serverVersion = "0.0.3";
@@ -132,13 +133,13 @@ namespace Server
                 IncorrectCommand();
             }
         }
-        private void SendData(string message)
+        public void SendData(string message)
         {
             string jsonMsg = JsonConvert.SerializeObject(message);
             byte[] msg = Encoding.ASCII.GetBytes(jsonMsg);
             clientSocket.Send(msg);
         }
-        private string ReceiveData()
+        public string ReceiveData()
         {
             byte[] bytes = new byte[1024];
             string jsonData = null;

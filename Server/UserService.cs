@@ -1,8 +1,9 @@
 ﻿using System.IO;
 using Newtonsoft.Json;
+using Server.Interfaces;
 
 namespace Server;
-public class UserService
+public class UserService : IUserService
 {
     private string currentRole;
     private string loggedInUser;
