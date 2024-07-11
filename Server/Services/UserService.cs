@@ -2,7 +2,7 @@
 using Newtonsoft.Json;
 using Server.Interfaces;
 
-namespace Server;
+namespace Server.Services;
 public class UserService : IUserService
 {
     private string currentRole;

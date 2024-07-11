@@ -1,87 +1,107 @@
-﻿using Server;
+﻿using Newtonsoft.Json;
+using System;
 using System.IO;
+using System.Net;
 using System.Net.Sockets;
 using System.Text;
+using Server.Services;
 using Xunit;
-using Moq;
-using Newtonsoft.Json;
 
-public class MessageServiceTests
+namespace Server.Tests
 {
-    private readonly MessageService _messageService;
-    private readonly Mock<Socket> _mockSocket;
-
-    public MessageServiceTests()
+    public class MessageServiceTests : IDisposable
     {
-        _mockSocket = new Mock<Socket>(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-        _messageService = new MessageService();
-        _messageService.SetClientSocket(_mockSocket.Object);
-    }
+        private readonly Socket _serverSocket;
+        private readonly Socket _clientSocket;
+        private readonly MessageService _messageService;
+        private readonly NetworkStream _clientStream;
+        private readonly StreamWriter _clientWriter;
+        private readonly StreamReader _clientReader;
 
-    [Fact]
-    public void SendMessage_ShouldSendMessageToExistingUser()
-    {
-        // Arrange
-        var username = "testuser";
-        var message = "Hello, this is a test message!";
-        var expectedFilePath = $"{username}.json";
-        var expectedMsgFilePath = $"{username}_msg.txt";
-
-        CreateTestUser(username);
-
-        _mockSocket.SetupSequence(s => s.Receive(It.IsAny<byte[]>()))
-            .Returns(Encoding.ASCII.GetBytes(JsonConvert.SerializeObject(username)).Length)
-            .Returns(Encoding.ASCII.GetBytes(JsonConvert.SerializeObject(message)).Length);
-
-        // Act
-        _messageService.SendMessage();
-
-        // Assert
-        Assert.True(File.Exists(expectedMsgFilePath));
-        var messages = File.ReadAllLines(expectedMsgFilePath);
-        Assert.Contains(message, messages);
-        
-        DeleteTestFiles(username);
-    }
-
-    private void CreateTestUser(string username)
-    {
-        var user = new User()
+        public MessageServiceTests()
         {
-            Userame = username,
-            Password = "password123",
-            Role = "user"
-        };
+            // Create a pair of connected sockets
+            (_serverSocket, _clientSocket) = CreateSocketPair();
 
-        using (StreamWriter file = File.CreateText($"{username}.json"))
-        {
-            JsonSerializer serializer = new JsonSerializer();
-            serializer.Serialize(file, user);
+            _messageService = new MessageService();
+            _messageService.SetClientSocket(_serverSocket);
+
+            _clientStream = new NetworkStream(_clientSocket);
+            _clientWriter = new StreamWriter(_clientStream, Encoding.ASCII) { AutoFlush = true };
+            _clientReader = new StreamReader(_clientStream, Encoding.ASCII);
         }
-    }
 
-    private void FillMailbox(string username)
-    {
-        var msgFile = $"{username}_msg.txt";
-        for (int i = 0; i < 5; i++)
+        [Fact]
+        public void SendMessage_ShouldSendCorrectResponses()
         {
-            File.AppendAllText(msgFile, $"Test message {i + 1}\n");
-        }
-    }
+            // Arrange
+            var username = "testuser";
+            var message = "Hello, this is a test message.";
+            var userFile = $"{username}.json";
+            var msgFile = $"{username}_msg.txt";
+            var user = new User() { Userame = username, Password = "password", Role = "user" };
 
-    private void DeleteTestFiles(string username)
-    {
-        var userFile = $"{username}.json";
-        var msgFile = $"{username}_msg.txt";
+            // Ensure user file exists
+            File.WriteAllText(userFile, JsonConvert.SerializeObject(user));
 
-        if (File.Exists(userFile))
-        {
+            // Act in a separate thread to avoid blocking
+            var serverTask = Task.Run(() => _messageService.SendMessage());
+
+            // Simulate client behavior
+            Assert.Equal("Enter username:", ReadMessageFromServer());
+            SendMessageToServer(username);
+
+            Assert.Equal("Type your message:", ReadMessageFromServer());
+            SendMessageToServer(message);
+
+            Assert.Equal("Message has been sent.", ReadMessageFromServer());
+
+            // Wait for the server task to complete
+            serverTask.Wait();
+
+            // Verify that the message was saved in the correct file
+            var messages = File.ReadAllLines(msgFile);
+            Assert.Contains(message, messages);
+
+            // Cleanup
             File.Delete(userFile);
+            File.Delete(msgFile);
         }
 
-        if (File.Exists(msgFile))
+        private (Socket serverSocket, Socket clientSocket) CreateSocketPair()
         {
-            File.Delete(msgFile);
+            var listener = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+            listener.Bind(new IPEndPoint(IPAddress.Loopback, 0));
+            listener.Listen(1);
+
+            var client = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+            client.Connect(listener.LocalEndPoint);
+            var server = listener.Accept();
+
+            listener.Close();
+
+            return (server, client);
+        }
+
+        private void SendMessageToServer(string message)
+        {
+            var jsonMsg = JsonConvert.SerializeObject(message);
+            _clientWriter.WriteLine(jsonMsg);
+        }
+
+        private string ReadMessageFromServer()
+        {
+            var jsonMsg = _clientReader.ReadLine();
+            return JsonConvert.DeserializeObject<string>(jsonMsg);
+        }
+
+        public void Dispose()
+        {
+            _clientWriter.Dispose();
+            _clientReader.Dispose();
+            _clientStream.Dispose();
+            _serverSocket.Dispose();
+            _clientSocket.Dispose();
         }
     }
 }

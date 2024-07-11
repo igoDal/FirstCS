@@ -1,13 +1,12 @@
-﻿using Newtonsoft.Json;
-using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net.Sockets;
 using System.Text;
+using Newtonsoft.Json;
 using Server.Interfaces;
 
-namespace Server
+namespace Server.Services
 {
     public class MessageService : IMessageService
     {

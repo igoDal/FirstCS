@@ -10,6 +10,7 @@ using System.Collections.Generic;
 using Newtonsoft.Json.Linq;
 using System.Linq;
 using Server.Interfaces;
+using Server.Services;
 
 namespace Server
 {
@@ -20,7 +21,6 @@ namespace Server
         private readonly static DateTime serverCreationDate = DateTime.Now;
         private byte[] message;
         private string jsonMsg;
-        private readonly byte[] bytes = new byte[1024];
         private readonly byte[] bytesU = new byte[1024];
         private readonly byte[] bytesP = new byte[1024];
         private bool loggedIn = false;
@@ -28,21 +28,28 @@ namespace Server
         private string currentRole;
         private string loggedInUser;
         
-        private readonly UserService userService;
-        private readonly MessageService messageService;
+        private readonly IUserService userService;
+        private readonly IMessageService messageService;
+        private readonly IServerInfoService serverInfoService;
+
         
 
-        public ServerSocket(UserService userService, MessageService messageService)
+        public ServerSocket(IUserService userService, 
+            IMessageService messageService, 
+            IServerInfoService serverInfoService)
         {
             this.userService = userService;
             this.messageService = messageService;
+            this.serverInfoService = serverInfoService;
+
         }
         
         static void Main(string[] args)
         {
             var userService = new UserService();
             var messageService = new MessageService();
-            var serverSocket = new ServerSocket(userService, messageService);
+            var serverInfoService = new ServerInfoService(serverVersion, serverCreationDate);
+            var serverSocket = new ServerSocket(userService, messageService, serverInfoService);
             serverSocket.StartServer();
         }
 
@@ -61,6 +68,8 @@ namespace Server
                 Console.WriteLine("Awaiting connection...");
                 clientSocket = listener.Accept();
                 messageService.SetClientSocket(clientSocket);
+                serverInfoService.SetClientSocket(clientSocket);
+
 
                 Console.WriteLine("Connected");
 
