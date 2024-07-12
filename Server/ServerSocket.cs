@@ -16,7 +16,7 @@ namespace Server
 {
     public class ServerSocket : IServerSocket
     {
-        private static Socket clientSocket;
+        private ISocketWrapper clientSocket;
         private readonly static string serverVersion = "0.0.3";
         private readonly static DateTime serverCreationDate = DateTime.Now;
         private byte[] message;
@@ -31,8 +31,6 @@ namespace Server
         private readonly IUserService userService;
         private readonly IMessageService messageService;
         private readonly IServerInfoService serverInfoService;
-
-        
 
         public ServerSocket(IUserService userService, 
             IMessageService messageService, 
@@ -66,7 +64,8 @@ namespace Server
                 listener.Listen(10);
 
                 Console.WriteLine("Awaiting connection...");
-                clientSocket = listener.Accept();
+                Socket acceptedSocket = listener.Accept();
+                clientSocket = new SocketWrapper(acceptedSocket);
                 messageService.SetClientSocket(clientSocket);
                 serverInfoService.SetClientSocket(clientSocket);
 
@@ -123,9 +122,9 @@ namespace Server
             {
                 { "add", AddUser },
                 { "user", PrintUserInfo },
-                { "help", HelpCommand },
-                { "info", InfoCommand },
-                { "uptime", UptimeCommand },
+                { "help", serverInfoService.HelpCommand },
+                { "info", serverInfoService.InfoCommand },
+                { "uptime", serverInfoService.UptimeCommand },
                 { "stop", StopCommand },
                 { "logout", Logout },
                 { "delete", DeleteUser },

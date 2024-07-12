@@ -4,7 +4,7 @@ namespace Server.Interfaces;
 
 public interface IServerInfoService
 {
-    void SetClientSocket(Socket clientSocket);
+    void SetClientSocket(ISocketWrapper clientSocket);
     void InfoCommand();
     void HelpCommand();
     void UptimeCommand();

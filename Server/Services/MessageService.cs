@@ -10,9 +10,9 @@ namespace Server.Services
 {
     public class MessageService : IMessageService
     {
-        private Socket _clientSocket;
+        private ISocketWrapper _clientSocket;
 
-        public void SetClientSocket(Socket clientSocket)
+        public void SetClientSocket(ISocketWrapper clientSocket)
         {
             _clientSocket = clientSocket;
         }

@@ -10,7 +10,7 @@ public class ServerInfoService : IServerInfoService
 {
     private readonly string serverVersion;
     private readonly DateTime serverCreationDate;
-    private Socket clientSocket;
+    private ISocketWrapper clientSocket;
 
     public ServerInfoService(string version, DateTime creationDate)
     {
@@ -18,7 +18,7 @@ public class ServerInfoService : IServerInfoService
         serverCreationDate = creationDate;
     }
 
-    public void SetClientSocket(Socket socket)
+    public void SetClientSocket(ISocketWrapper socket)
     {
         clientSocket = socket;
     }
