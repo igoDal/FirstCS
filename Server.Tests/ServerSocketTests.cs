@@ -4,6 +4,7 @@ using System.Net.Sockets;
 using System.Text;
 using Newtonsoft.Json;
 using System.Threading.Tasks;
+using Server.Services;
 
 namespace Server.Tests
 {
@@ -20,7 +21,7 @@ namespace Server.Tests
         public void AddUser_ShouldAddNewUser()
         {
             // Arrange
-            var username = "testuser";
+            var username = "123aaa";
             var password = "password123";
             var expectedFilePath = $"{username}.json";
 
@@ -30,8 +31,7 @@ namespace Server.Tests
             // Assert
             Assert.Equal($"User {username} has been added.", result);
             Assert.True(File.Exists(expectedFilePath));
-
-            // Cleanup
+            
             if (File.Exists(expectedFilePath))
             {
                 File.Delete(expectedFilePath);
@@ -45,8 +45,7 @@ namespace Server.Tests
             var username = "existinguser";
             var password = "password123";
             var expectedFilePath = $"{username}.json";
-
-            // Add user first time
+            
             _userService.AddUser(username, password);
 
             // Act
@@ -54,8 +53,7 @@ namespace Server.Tests
 
             // Assert
             Assert.Equal($"User {username} already exists.", result);
-
-            // Cleanup
+            
             if (File.Exists(expectedFilePath))
             {
                 File.Delete(expectedFilePath);
