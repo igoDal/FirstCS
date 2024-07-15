@@ -7,6 +7,7 @@ public class UserService : IUserService
 {
     private string currentRole;
     private string loggedInUser;
+    private bool isLoggedIn;
     public string AddUser(string username, string password)
     {
         if (File.Exists($"{username}.json"))
@@ -42,6 +43,7 @@ public class UserService : IUserService
 
             if (getPassword.Equals(password))
             {
+                isLoggedIn = true;
                 return (true, "loggedIn");
             }
             else
@@ -54,6 +56,25 @@ public class UserService : IUserService
             return (false, "User doesn't exist.");
         }
     }
+    
+    public string DeleteUser(string username)
+    {
+        var file = $"{username}.json";
+        if (File.Exists(file))
+        {
+            File.Delete(file);
+            var msgFile = $"{username}_msg.txt";
+            if (File.Exists(msgFile))
+            {
+                File.Delete(msgFile);
+            }
+            return $"User {username} has been deleted.";
+        }
+        else
+        {
+            return $"User {username} does not exist.";
+        }
+    }
     public string GetCurrentRole()
     {
         return currentRole;
@@ -62,5 +83,15 @@ public class UserService : IUserService
     public string GetLoggedInUser()
     {
         return loggedInUser;
+    }
+    public void Logout()
+    {
+        isLoggedIn = false;
+        loggedInUser = null;
+        currentRole = null;
+    }
+    public bool IsLoggedIn()
+    {
+        return isLoggedIn;
     }
 }

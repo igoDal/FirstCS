@@ -59,5 +59,39 @@ namespace Server.Tests
                 File.Delete(expectedFilePath);
             }
         }
+        
+        [Fact]
+        public void DeleteUser_ShouldDeleteExistingUser()
+        {
+            // Arrange
+            var username = "usertodelete";
+            var password = "password123";
+            var expectedFilePath = $"{username}.json";
+
+            _userService.AddUser(username, password);
+
+            // Act
+            var result = _userService.DeleteUser(username);
+
+            // Assert
+            Assert.Equal($"User {username} has been deleted.", result);
+            Assert.False(File.Exists(expectedFilePath));
+        }
+        
+        [Fact]
+        public void DeleteUser_ShouldNotDeleteNonExistingUser()
+        {
+            // Arrange
+            var username = "nonexistinguser";
+            var expectedFilePath = $"{username}.json";
+
+            // Act
+            var result = _userService.DeleteUser(username);
+
+            // Assert
+            Assert.Equal($"User {username} does not exist.", result);
+            Assert.False(File.Exists(expectedFilePath));
+        }
+        
     }
 }
