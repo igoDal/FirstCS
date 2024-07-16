@@ -75,6 +75,22 @@ public class UserService : IUserService
             return $"User {username} does not exist.";
         }
     }
+    
+    public string GetUserInfo(string username)
+    {
+        var file = $"{username}.json";
+        if (File.Exists(file))
+        {
+            var fileRead = File.ReadAllText(file);
+            var singleUserData = JsonConvert.DeserializeObject<User>(fileRead);
+
+            return $"Username: {singleUserData.Userame}\nPassword: {singleUserData.Password}\nRole: {singleUserData.Role}";
+        }
+        else
+        {
+            return "User file not found.";
+        }
+    }
     public string GetCurrentRole()
     {
         return currentRole;

@@ -152,19 +152,8 @@ namespace Server.Services
                 return;
             }
 
-            var file = $"{loggedInUser}.json";
-            if (File.Exists(file))
-            {
-                var fileRead = File.ReadAllText(file);
-                var singleUserData = JsonConvert.DeserializeObject<User>(fileRead);
-
-                string userInfo = $"Username: {singleUserData.Userame}\nPassword: {singleUserData.Password}\nRole: {singleUserData.Role}";
-                SendData(userInfo);
-            }
-            else
-            {
-                SendData("User file not found.");
-            }
+            string userInfo = userService.GetUserInfo(loggedInUser);
+            SendData(userInfo);
         }
         
         private void Login()

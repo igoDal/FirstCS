@@ -9,4 +9,5 @@ public interface IUserService
     void Logout();
     bool IsLoggedIn();
     string DeleteUser(string username);
+    string GetUserInfo(string username);
 }
