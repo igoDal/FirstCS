@@ -2,6 +2,7 @@
 
 public interface IMessageService
 {
-    void SendMessage(string command, ISocketWrapper socketWrapper);
-    void ReadMessage(string command, ISocketWrapper socketWrapper);
+    void SetClientSocket(ISocketWrapper socket);
+    void SendMessage(ISocketWrapper socketWrapper);
+    void ReadMessage(ISocketWrapper socketWrapper);
 }

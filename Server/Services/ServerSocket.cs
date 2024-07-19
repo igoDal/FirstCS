@@ -84,8 +84,11 @@ namespace Server.Services
             }
         }
         
-        private void HandleFirstCommand(string command)
+        private void HandleFirstCommand(string commandJson)
         {
+            dynamic commandObj = JsonConvert.DeserializeObject(commandJson);
+            string command = commandObj.command;
+            
             switch (command)
             {
                 case "login":
@@ -129,20 +132,40 @@ namespace Server.Services
                 IncorrectCommand();
             }
         }
+        private void Login()
+        {
+            SendData(JsonConvert.SerializeObject(new { message = "Enter username:" }));
+            string username = ReceiveData();
+            SendData(JsonConvert.SerializeObject(new { message = "Enter password:" }));
+            string password = ReceiveData();
+
+            var (success, message) = userService.Login(username, password);
+            SendData(JsonConvert.SerializeObject(new { message }));
+
+            if (success)
+            {
+                // Send a prompt for further commands
+                SendData(JsonConvert.SerializeObject(new { message = "Login successful. Awaiting further commands." }));
+            }
+            else
+            {
+                SendData(JsonConvert.SerializeObject(new { message = "Login failed." }));
+            }
+        }
+
         public void SendData(string message)
         {
-            string jsonMsg = JsonConvert.SerializeObject(message);
-            byte[] msg = Encoding.ASCII.GetBytes(jsonMsg);
+            byte[] msg = Encoding.ASCII.GetBytes(message);
             clientSocket.Send(msg);
         }
+
         public string ReceiveData()
         {
             byte[] bytes = new byte[1024];
-            string jsonData = null;
             int numByte = clientSocket.Receive(bytes);
-            jsonData += Encoding.ASCII.GetString(bytes, 0, numByte);
-            return JsonConvert.DeserializeObject(jsonData)?.ToString();
+            return Encoding.ASCII.GetString(bytes, 0, numByte);
         }
+
         private void PrintUserInfo()
         {
             string loggedInUser = userService.GetLoggedInUser();
@@ -154,22 +177,6 @@ namespace Server.Services
 
             string userInfo = userService.GetUserInfo(loggedInUser);
             SendData(userInfo);
-        }
-        
-        private void Login()
-        {
-            SendData("Enter username:");
-            string username = ReceiveData();
-            SendData("Enter password:");
-            string password = ReceiveData();
-
-            var (success, message) = userService.Login(username, password);
-            SendData(message);
-
-            if (success)
-            {
-                // loggedIn is now managed by userService.IsLoggedIn()
-            }
         }
 
         private void Logout()

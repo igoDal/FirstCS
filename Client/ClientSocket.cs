@@ -15,18 +15,21 @@ namespace Client
     {
         private bool isLoggedIn = false;
         private bool continueListening = true;
-        private bool notLoggedInFlag = false;
         private ISocketWrapper _socketWrapper;
         private readonly IUserService _userService;
+        private readonly IMessageService _messageService;
+
         public bool IsLoggedIn
         {
             get { return isLoggedIn; }
         }
 
-        public ClientSocket(ISocketWrapper socketWrapper, IUserService userService)
+        public ClientSocket(ISocketWrapper socketWrapper, IUserService userService, IMessageService messageService)
         {
             _socketWrapper = socketWrapper;
             _userService = userService;
+            _messageService = messageService;
+
         }
 
         static void Main(string[] args)
@@ -37,7 +40,8 @@ namespace Client
             Socket socket = new Socket(ipAddress.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
             ISocketWrapper socketWrapper = new SocketWrapper(socket);
             IUserService userService = new UserService();
-            ClientSocket clientSocket = new ClientSocket(socketWrapper, userService);
+            IMessageService messageService = new MessageService();
+            ClientSocket clientSocket = new ClientSocket(socketWrapper, userService, messageService);
 
             clientSocket.ExecuteClient(localEndpoint);
         }
@@ -51,7 +55,10 @@ namespace Client
 
                 while (continueListening)
                 {
-                    Menu();
+                    if (!isLoggedIn)
+                    {
+                        Menu();
+                    }
 
                     while (isLoggedIn)
                     {
@@ -59,12 +66,8 @@ namespace Client
 
                         //------------START-------------
                         
-                        byte[] initialCommand = new byte[1024];
-                        int initComm = _socketWrapper.Receive(initialCommand);
-                        string jsonInitComm = Encoding.ASCII.GetString(initialCommand, 0, initComm);
-                        string encodingInitComm = JsonConvert.DeserializeObject(jsonInitComm).ToString();
-
-                        Console.WriteLine(encodingInitComm);
+                        string commandPrompt = ReceiveJsonData();
+                        Console.WriteLine(commandPrompt);
 
                         string command = Console.ReadLine();
                         switch (command)
@@ -79,10 +82,10 @@ namespace Client
                                 Stop(command);
                                 break;
                             case "msg":
-                                SendMessage(command);
+                                //_messageService.SendMessage(_socketWrapper);
                                 break;
                             case "read":
-                                ReadMessage(command);
+                                //_messageService.ReadMessage(_socketWrapper, _userService.GetLoggedInUser());
                                 break;
                             case "user":
                                 PrintUserInfo(command);
@@ -112,79 +115,19 @@ namespace Client
             }
         }
 
-        private void ReadMessage(string command)
-        {
-            DefaultMessage(command);
-        }
-
-        public void SendMessage(string command)
-        {
-            //Call sendMessage method on server side
-            string jsonCommand = JsonConvert.SerializeObject(command);
-            byte[] msgCommand = Encoding.ASCII.GetBytes(jsonCommand);
-            _socketWrapper.Send(msgCommand);
-            
-            byte[] msgReceived = new byte[1024];
-            int byteRcvd = _socketWrapper.Receive(msgReceived);
-            string jsonString = Encoding.ASCII.GetString(msgReceived, 0, byteRcvd);
-            string encodingString;
-            try
-            {
-                var deserializedObject = JsonConvert.DeserializeObject(jsonString);
-                encodingString = deserializedObject.ToString();
-            }
-            catch (JsonReaderException)
-            {
-                encodingString = jsonString;
-            }
-
-            Console.WriteLine(encodingString);
-            
-            //Request for username (message receiver)
-            string userToSend = Console.ReadLine();
-            string jsonUserToSend= JsonConvert.SerializeObject(userToSend);
-            byte[] usernameSent = Encoding.ASCII.GetBytes(jsonUserToSend);
-            _socketWrapper.Send(usernameSent);
-
-            byte[] userToSendReceived = new byte[1024];
-            int byteUserRcvd = _socketWrapper.Receive(userToSendReceived);
-            string jsonUserString = Encoding.ASCII.GetString(userToSendReceived, 0, byteUserRcvd);
-            string encodingUserString = JsonConvert.DeserializeObject(jsonUserString).ToString();
-            Console.WriteLine(encodingUserString);
-
-            string message = Console.ReadLine();
-            const int MAX_LENGTH = 255;
-            if (message.Length > MAX_LENGTH)
-            {
-                message = message.Substring(0, MAX_LENGTH);
-            }
-            string jsonMessage = JsonConvert.SerializeObject(message);
-            byte[] messageToSend = Encoding.ASCII.GetBytes(jsonMessage);
-            _socketWrapper.Send(messageToSend);
-
-            byte[] messageReceived = new byte[1024];
-            int byteMessageRcvd = _socketWrapper.Receive(messageReceived);
-            string jsonStringMessage = Encoding.ASCII.GetString(messageReceived, 0, byteMessageRcvd);
-            string encodingStringMessage = JsonConvert.DeserializeObject(jsonStringMessage).ToString();
-            Console.WriteLine(encodingStringMessage);
-        }
-
         private void Menu()
         {
-            Console.WriteLine("\nType '1' to login\n" +
-                            "Type '2' to create new user\n"); //+
+            Console.WriteLine("\nType '1' to login\nType '2' to create new user\n");
             char choice = Console.ReadKey().KeyChar;
             Console.WriteLine();
             if (choice == '1')
             {
-                Console.WriteLine("\nPodaj login: ");
-                string username = Console.ReadLine();
-                Console.WriteLine("\nPodaj hasło: ");
-                string password = Console.ReadLine();
-                Login(username, password);
+                SendInitialCommand("login");
+                Login();
             }
             else if (choice == '2')
             {
+                SendInitialCommand("add");
                 AddUser();
             }
             else
@@ -192,7 +135,12 @@ namespace Client
                 return;
             }
         }
-
+        private void SendInitialCommand(string command)
+        {
+            string jsonCommand = JsonConvert.SerializeObject(new { command });
+            byte[] messageSent = Encoding.ASCII.GetBytes(jsonCommand);
+            _socketWrapper.Send(messageSent);
+        }
         private void DefaultMessage(string command)
         {
             string jsonCommand = JsonConvert.SerializeObject(command);
@@ -216,14 +164,27 @@ namespace Client
             continueListening = false;
         }
 
-        public void Login(string username, string password)
+        public void Login()
         {
-            var (success, message) = _userService.Login(username, password);
-            Console.WriteLine(message);
+            string usernamePrompt = ReceiveJsonData();
+            Console.WriteLine(usernamePrompt);
 
-            if (success)
+            string username = Console.ReadLine();
+            SendData(username);
+
+            string passwordPrompt = ReceiveJsonData();
+            Console.WriteLine(passwordPrompt);
+
+            string password = Console.ReadLine();
+            SendData(password);
+
+            string jsonResponse = ReceiveJsonData();
+            dynamic response = JsonConvert.DeserializeObject(jsonResponse);
+            Console.WriteLine(response.message);
+
+            if (response.message == "loggedIn")
             {
-                Console.WriteLine($"\n{username} has logged in.");
+                Console.WriteLine("\nLogin successful. Awaiting further commands.");
                 isLoggedIn = true;
             }
         }
@@ -270,64 +231,20 @@ namespace Client
             string result = _userService.AddUser(username, password);
             Console.WriteLine(result);
         }
-
-        private string UsernameRequest(string command)
+        
+        private string ReceiveJsonData()
         {
-            string jsonCommand = JsonConvert.SerializeObject(command);
-            byte[] messageSentUsername = Encoding.ASCII.GetBytes(jsonCommand);
-            _socketWrapper.Send(messageSentUsername);
-            
-            byte[] messageReceivedUser = new byte[1024];
-            int byteRcvdUser = _socketWrapper.Receive(messageReceivedUser);
-            string jsonString = Encoding.ASCII.GetString(messageReceivedUser, 0, byteRcvdUser);
-
-            try
-            {
-                var deserializedObject = JsonConvert.DeserializeObject(jsonString);
-                return deserializedObject.ToString();
-            }
-            catch (JsonReaderException)
-            {
-                return jsonString;
-            }
+            byte[] buffer = new byte[1024];
+            int bytesReceived = _socketWrapper.Receive(buffer);
+            string jsonString = Encoding.ASCII.GetString(buffer, 0, bytesReceived);
+            dynamic response = JsonConvert.DeserializeObject(jsonString);
+            return response.message;
         }
-
-        private void EnterUsername(string username)
+        private void SendData(string data)
         {
-            string jsonSendUsername = JsonConvert.SerializeObject(username);
-            byte[] sendUsername = Encoding.ASCII.GetBytes(jsonSendUsername);
-            _socketWrapper.Send(sendUsername);
-        }
-
-        private string PasswordRequest()
-        {
-            byte[] receivePasswordRequest = new byte[1024];
-            int passwordRequestReceived = _socketWrapper.Receive(receivePasswordRequest);
-            string jsonStringPasswordRequest = Encoding.ASCII.GetString(receivePasswordRequest, 0, passwordRequestReceived);
-
-            string encodingStringPasswordRequest;
-            try
-            {
-                var deserializedObject = JsonConvert.DeserializeObject(jsonStringPasswordRequest);
-                encodingStringPasswordRequest =  deserializedObject.ToString();
-            }
-            catch (JsonReaderException)
-            {
-                encodingStringPasswordRequest = jsonStringPasswordRequest;
-            }
-            if (encodingStringPasswordRequest.ToLower().Equals("user doesn't exist."))
-            {
-                notLoggedInFlag = true;
-            }
-
-            return encodingStringPasswordRequest;
-        }
-
-        private void EnterPassword(string password)
-        {
-            string jsonSendPassword = JsonConvert.SerializeObject(password);
-            byte[] sendPassword = Encoding.ASCII.GetBytes(jsonSendPassword);
-            _socketWrapper.Send(sendPassword);
+            string jsonData = JsonConvert.SerializeObject(new { message = data });
+            byte[] messageSent = Encoding.ASCII.GetBytes(jsonData);
+            _socketWrapper.Send(messageSent);
         }
     }
 }
