@@ -143,16 +143,12 @@ namespace Client
         }
         private void DefaultMessage(string command)
         {
-            string jsonCommand = JsonConvert.SerializeObject(command);
+            string jsonCommand = JsonConvert.SerializeObject(new { command });
             byte[] messageSent = Encoding.ASCII.GetBytes(jsonCommand);
             _socketWrapper.Send(messageSent);
 
-            byte[] messageReceived = new byte[1024];
-
-            int byteRcvd = _socketWrapper.Receive(messageReceived);
-            string jsonString = Encoding.ASCII.GetString(messageReceived, 0, byteRcvd);
-            string encodingString = JsonConvert.DeserializeObject(jsonString).ToString();
-            Console.WriteLine(encodingString);
+            string jsonResponse = ReceiveJsonData();
+            Console.WriteLine(jsonResponse);
         }
 
         private void Stop(string command)
