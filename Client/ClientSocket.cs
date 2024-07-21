@@ -185,14 +185,14 @@ namespace Client
             }
         }
 
-        private void Logout(string command)
+        public void Logout(string command)
         {
             _userService.Logout();
             isLoggedIn = false;
             Console.WriteLine("You have been logged out.");
         }
 
-        private void PrintUserInfo(string command)
+        public void PrintUserInfo(string command)
         {
             string jsonCommand = JsonConvert.SerializeObject(command);
             byte[] messageSent = Encoding.ASCII.GetBytes(jsonCommand);
@@ -217,7 +217,7 @@ namespace Client
             
         }
 
-        private void AddUser()
+        public void AddUser()
         {
             Console.WriteLine("Enter username:");
             string username = Console.ReadLine();
@@ -228,7 +228,7 @@ namespace Client
             Console.WriteLine(result);
         }
         
-        private string ReceiveJsonData()
+        public string ReceiveJsonData()
         {
             byte[] buffer = new byte[1024];
             int bytesReceived = _socketWrapper.Receive(buffer);
@@ -236,7 +236,7 @@ namespace Client
             dynamic response = JsonConvert.DeserializeObject(jsonString);
             return response.message;
         }
-        private void SendData(string data)
+        public void SendData(string data)
         {
             string jsonData = JsonConvert.SerializeObject(new { message = data });
             byte[] messageSent = Encoding.ASCII.GetBytes(jsonData);

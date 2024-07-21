@@ -60,4 +60,40 @@ public class ClientSocketTests
             // Assert
             _socketWrapperMock.Verify(sw => sw.Send(It.Is<byte[]>(b => Encoding.ASCII.GetString(b).Contains("No user is currently logged in."))), Times.Once);
         }
+        
+        [Fact]
+        public void AddUser_ShouldSendSuccessMessage_WhenUserIsAddedSuccessfully()
+        {
+            // Arrange
+            var username = "newuser";
+            var password = "password123";
+            var result = $"User {username} has been added.";
+
+            _userServiceMock.Setup(us => us.AddUser(username, password)).Returns(result);
+            _socketWrapperMock.Setup(sw => sw.Send(It.IsAny<byte[]>()));
+
+            // Act
+            _clientSocket.AddUser(username, password);
+
+            // Assert
+            _socketWrapperMock.Verify(sw => sw.Send(It.Is<byte[]>(b => Encoding.ASCII.GetString(b).Contains(result))), Times.Once);
+        }
+
+        [Fact]
+        public void AddUser_ShouldSendErrorMessage_WhenUserAlreadyExists()
+        {
+            // Arrange
+            var username = "existinguser";
+            var password = "password123";
+            var result = $"User {username} already exists.";
+
+            _userServiceMock.Setup(us => us.AddUser(username, password)).Returns(result);
+            _socketWrapperMock.Setup(sw => sw.Send(It.IsAny<byte[]>()));
+
+            // Act
+            _clientSocket.AddUser(username, password);
+
+            // Assert
+            _socketWrapperMock.Verify(sw => sw.Send(It.Is<byte[]>(b => Encoding.ASCII.GetString(b).Contains(result))), Times.Once);
+        }
     }
