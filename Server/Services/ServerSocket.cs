@@ -84,10 +84,10 @@ namespace Server.Services
             }
         }
         
-        private void HandleFirstCommand(string commandJson)
+        private void HandleFirstCommand(string command)
         {
-            dynamic commandObj = JsonConvert.DeserializeObject(commandJson);
-            string command = commandObj.command;
+            //dynamic commandObj = JsonConvert.DeserializeObject(commandJson);
+            //string command = commandObj.command;
             
             switch (command)
             {
@@ -134,28 +134,28 @@ namespace Server.Services
         }
         private void Login()
         {
-            SendData(JsonConvert.SerializeObject(new { message = "Enter username:" }));
+            SendData(JsonConvert.SerializeObject(new { command = "Enter username:" }));
             string username = ReceiveData();
-            SendData(JsonConvert.SerializeObject(new { message = "Enter password:" }));
+            SendData(JsonConvert.SerializeObject(new { command = "Enter password:" }));
             string password = ReceiveData();
 
-            var (success, message) = userService.Login(username, password);
-            SendData(JsonConvert.SerializeObject(new { message }));
+            var (success, command) = userService.Login(username, password);
+            SendData(JsonConvert.SerializeObject(new { command }));
 
             if (success)
             {
                 // Send a prompt for further commands
-                SendData(JsonConvert.SerializeObject(new { message = "Login successful. Awaiting further commands." }));
+                SendData(JsonConvert.SerializeObject(new { command = "Login successful. Awaiting further commands." }));
             }
             else
             {
-                SendData(JsonConvert.SerializeObject(new { message = "Login failed." }));
+                SendData(JsonConvert.SerializeObject(new { command = "Login failed." }));
             }
         }
 
-        public void SendData(string message)
+        public void SendData(string command)
         {
-            byte[] msg = Encoding.ASCII.GetBytes(message);
+            byte[] msg = Encoding.ASCII.GetBytes(command);
             clientSocket.Send(msg);
         }
 
@@ -163,8 +163,11 @@ namespace Server.Services
         {
             byte[] bytes = new byte[1024];
             int numByte = clientSocket.Receive(bytes);
-            return Encoding.ASCII.GetString(bytes, 0, numByte);
+            string jsonString = Encoding.ASCII.GetString(bytes, 0, numByte);
+            dynamic jsonResponse = JsonConvert.DeserializeObject(jsonString);
+            return jsonResponse.command;
         }
+
 
         private void PrintUserInfo()
         {

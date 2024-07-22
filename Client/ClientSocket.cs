@@ -176,9 +176,9 @@ namespace Client
 
             string jsonResponse = ReceiveJsonData();
             dynamic response = JsonConvert.DeserializeObject(jsonResponse);
-            Console.WriteLine(response.message);
+            Console.WriteLine(response.command);
 
-            if (response.message == "loggedIn")
+            if (response.command == "loggedIn")
             {
                 Console.WriteLine("\nLogin successful. Awaiting further commands.");
                 isLoggedIn = true;
@@ -234,11 +234,11 @@ namespace Client
             int bytesReceived = _socketWrapper.Receive(buffer);
             string jsonString = Encoding.ASCII.GetString(buffer, 0, bytesReceived);
             dynamic response = JsonConvert.DeserializeObject(jsonString);
-            return response.message;
+            return response.command;
         }
         public void SendData(string data)
         {
-            string jsonData = JsonConvert.SerializeObject(new { message = data });
+            string jsonData = JsonConvert.SerializeObject(new { command = data });
             byte[] messageSent = Encoding.ASCII.GetBytes(jsonData);
             _socketWrapper.Send(messageSent);
         }
