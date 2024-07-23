@@ -143,9 +143,7 @@ namespace Client
         }
         private void DefaultMessage(string command)
         {
-            string jsonCommand = JsonConvert.SerializeObject(new { command });
-            byte[] messageSent = Encoding.ASCII.GetBytes(jsonCommand);
-            _socketWrapper.Send(messageSent);
+            SendData(command);
 
             string jsonResponse = ReceiveJsonData();
             Console.WriteLine(jsonResponse);
@@ -174,12 +172,13 @@ namespace Client
             string password = Console.ReadLine();
             SendData(password);
 
-            string jsonResponse = ReceiveJsonData();
-            dynamic response = JsonConvert.DeserializeObject(jsonResponse);
-            Console.WriteLine(response.command);
+            string response = ReceiveJsonData();
+            //dynamic response = JsonConvert.DeserializeObject(jsonResponse);
+            Console.WriteLine(response);
 
-            if (response.command == "loggedIn")
+            if (response == "loggedIn")
             {
+                //string data = ReceiveJsonData();
                 Console.WriteLine("\nLogin successful. Awaiting further commands.");
                 isLoggedIn = true;
             }

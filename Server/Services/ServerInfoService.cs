@@ -50,11 +50,11 @@ public class ServerInfoService : IServerInfoService
         var message = $"Server is up for {serverCurrentDate - serverCreationDate}";
         SendData(message);
     }
-
-    private void SendData(string message)
+    
+    public void SendData(string command)
     {
-        var jsonMsg = JsonConvert.SerializeObject(message);
-        var msg = Encoding.ASCII.GetBytes(jsonMsg);
-        clientSocket.Send(msg);
+        string jsonData = JsonConvert.SerializeObject(new { command = command });
+        byte[] messageSent = Encoding.ASCII.GetBytes(jsonData);
+        clientSocket.Send(messageSent);
     }
 }

@@ -104,7 +104,7 @@ namespace Server.Services
 
         private void HandleLoggedInCommands()
         {
-            SendData("Enter command (type \"help\" to check available commands): ");
+            SendData("Enter command (type \"help\" to check available commands):");
             string data = ReceiveData()?.ToLower();
             if (data == null)
                 return;
@@ -134,29 +134,35 @@ namespace Server.Services
         }
         private void Login()
         {
-            SendData(JsonConvert.SerializeObject(new { command = "Enter username:" }));
+            SendData("Enter username:");
             string username = ReceiveData();
-            SendData(JsonConvert.SerializeObject(new { command = "Enter password:" }));
+            SendData("Enter password:");
             string password = ReceiveData();
 
             var (success, command) = userService.Login(username, password);
-            SendData(JsonConvert.SerializeObject(new { command }));
+            //SendData(JsonConvert.SerializeObject(new { command }));
 
             if (success)
             {
                 // Send a prompt for further commands
-                SendData(JsonConvert.SerializeObject(new { command = "Login successful. Awaiting further commands." }));
+                SendData(command);
             }
             else
             {
-                SendData(JsonConvert.SerializeObject(new { command = "Login failed." }));
+                SendData(command);
             }
         }
 
+        // public void SendData(string command)
+        // {
+        //     byte[] msg = Encoding.ASCII.GetBytes(command);
+        //     clientSocket.Send(msg);
+        // }
         public void SendData(string command)
         {
-            byte[] msg = Encoding.ASCII.GetBytes(command);
-            clientSocket.Send(msg);
+            string jsonData = JsonConvert.SerializeObject(new { command = command });
+            byte[] messageSent = Encoding.ASCII.GetBytes(jsonData);
+            clientSocket.Send(messageSent);
         }
 
         public string ReceiveData()
