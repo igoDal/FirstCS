@@ -178,14 +178,25 @@ namespace Server.Services
         private void PrintUserInfo()
         {
             string loggedInUser = userService.GetLoggedInUser();
-            if (string.IsNullOrEmpty(loggedInUser))
+            var role = userService.GetCurrentRole();
+            if (role.ToLower().Equals("admin"))
             {
-                SendData("No user is currently logged in.");
-                return;
-            }
+                var msg = "approved";
+                SendData(msg);
 
-            string userInfo = userService.GetUserInfo(loggedInUser);
-            SendData(userInfo);
+                var requestedUser = ReceiveData();
+                string userInfo = userService.GetUserInfo(requestedUser);
+                SendData(userInfo);
+            }
+            else
+            {
+                var msg = "not approved";
+                SendData(msg);
+                
+                var requestedUser = ReceiveData();
+                string userInfo = userService.GetUserInfo(requestedUser);
+                SendData(userInfo); 
+            }
         }
 
         private void Logout()

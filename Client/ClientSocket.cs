@@ -173,12 +173,11 @@ namespace Client
             SendData(password);
 
             string response = ReceiveJsonData();
-            //dynamic response = JsonConvert.DeserializeObject(jsonResponse);
             Console.WriteLine(response);
+            var (success, command) = _userService.Login(username, password);
 
-            if (response == "loggedIn")
+            if (success)
             {
-                //string data = ReceiveJsonData();
                 Console.WriteLine("\nLogin successful. Awaiting further commands.");
                 isLoggedIn = true;
             }
@@ -193,14 +192,9 @@ namespace Client
 
         public void PrintUserInfo(string command)
         {
-            string jsonCommand = JsonConvert.SerializeObject(command);
-            byte[] messageSent = Encoding.ASCII.GetBytes(jsonCommand);
-            _socketWrapper.Send(messageSent);
+            SendData(command);
 
-            byte[] messageReceived = new byte[1024];
-            int byteRcvd = _socketWrapper.Receive(messageReceived);
-            string jsonString = Encoding.ASCII.GetString(messageReceived, 0, byteRcvd);
-            string encodingString = JsonConvert.DeserializeObject(jsonString).ToString();
+            string encodingString = ReceiveJsonData();
 
             if (encodingString.ToLower().Equals("approved"))
             {
@@ -210,7 +204,8 @@ namespace Client
             }
             else
             {
-                DefaultMessage(encodingString);
+                var currentUser = _userService.GetLoggedInUser();
+                DefaultMessage(currentUser);
             }
 
             
