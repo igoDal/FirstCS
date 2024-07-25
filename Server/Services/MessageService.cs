@@ -40,9 +40,7 @@ namespace Server.Services
 
                 if (!readMessage.Equals("none"))
                 {
-                    string jsonReadMsg = JsonConvert.SerializeObject(readMessage);
-                    byte[] readMsgBytes = Encoding.ASCII.GetBytes(jsonReadMsg);
-                    _clientSocket.Send(readMsgBytes);
+                    SendData(readMessage);
                     File.WriteAllLines(file, lines.Skip(1));
                 }
                 else
@@ -101,10 +99,10 @@ namespace Server.Services
         private string ReceiveData()
         {
             byte[] bytes = new byte[1024];
-            string jsonData = null;
             int numByte = _clientSocket.Receive(bytes);
-            jsonData += Encoding.ASCII.GetString(bytes, 0, numByte);
-            return JsonConvert.DeserializeObject(jsonData)?.ToString();
+            string jsonString = Encoding.ASCII.GetString(bytes, 0, numByte);
+            dynamic jsonResponse = JsonConvert.DeserializeObject(jsonString);
+            return jsonResponse.command;
         }
     }
 }

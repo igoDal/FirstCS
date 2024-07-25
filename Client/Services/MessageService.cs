@@ -16,31 +16,44 @@ public class MessageService : IMessageService
 
     public void SendMessage(ISocketWrapper socketWrapper)
     {
-        string jsonCommand = JsonConvert.SerializeObject("Enter your message: ");
-        byte[] msgCommand = Encoding.ASCII.GetBytes(jsonCommand);
-        socketWrapper.Send(msgCommand);
+        SendData("msg");
+        
+        var request = ReceiveJsonData();
+            
+        Console.WriteLine($"{request}");
+        var username = Console.ReadLine();
+        
+        SendData(username);
+        
+        var msg = ReceiveJsonData();
+        Console.WriteLine($"{msg}");
 
-        byte[] msgReceived = new byte[1024];
-        int byteRcvd = socketWrapper.Receive(msgReceived);
-        string jsonString = Encoding.ASCII.GetString(msgReceived, 0, byteRcvd);
-        string encodingString = JsonConvert.DeserializeObject(jsonString).ToString();
-            
-        // Handle the message sending logic here, e.g., save it to a file or database
-            
-        Console.WriteLine($"Message received: {encodingString}");
+        var userMsg = Console.ReadLine();
+        SendData(userMsg);
+        
+        var confirmation = ReceiveJsonData();
+        Console.WriteLine($"{confirmation}");
     }
 
     public void ReadMessage(ISocketWrapper socketWrapper)
     {
-        string jsonCommand = JsonConvert.SerializeObject("Reading messages: ");
-        byte[] msgCommand = Encoding.ASCII.GetBytes(jsonCommand);
-        socketWrapper.Send(msgCommand);
-
-        // Handle the message reading logic here, e.g., read from a file or database
-        string messages = "Your messages go here"; // Placeholder for actual messages
-
-        string jsonResponse = JsonConvert.SerializeObject(messages);
-        byte[] msgResponse = Encoding.ASCII.GetBytes(jsonResponse);
-        socketWrapper.Send(msgResponse);
+        SendData("read");
+        
+        var msg = ReceiveJsonData();
+        Console.WriteLine($"Message: {msg}");
+    }
+    private void SendData(string data)
+    {
+        string jsonData = JsonConvert.SerializeObject(new { command = data });
+        byte[] messageSent = Encoding.ASCII.GetBytes(jsonData);
+        clientSocket.Send(messageSent);
+    }
+    private string ReceiveJsonData()
+    {
+        byte[] buffer = new byte[1024];
+        int bytesReceived = clientSocket.Receive(buffer);
+        string jsonString = Encoding.ASCII.GetString(buffer, 0, bytesReceived);
+        dynamic response = JsonConvert.DeserializeObject(jsonString);
+        return response;
     }
 }

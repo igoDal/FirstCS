@@ -51,6 +51,7 @@ namespace Client
             try
             {
                 _socketWrapper.Connect(localEndpoint);
+                _messageService.SetClientSocket(_socketWrapper);
                 Console.WriteLine("Socket connected to -> {0}", localEndpoint.ToString());
 
                 while (continueListening)
@@ -62,10 +63,6 @@ namespace Client
 
                     while (isLoggedIn)
                     {
-                        // Whole method needs to be changed
-
-                        //------------START-------------
-                        
                         string commandPrompt = ReceiveJsonData();
                         Console.WriteLine(commandPrompt);
 
@@ -82,10 +79,10 @@ namespace Client
                                 Stop(command);
                                 break;
                             case "msg":
-                                //_messageService.SendMessage(_socketWrapper);
+                                _messageService.SendMessage(_socketWrapper);
                                 break;
                             case "read":
-                                //_messageService.ReadMessage(_socketWrapper, _userService.GetLoggedInUser());
+                                _messageService.ReadMessage(_socketWrapper);
                                 break;
                             case "user":
                                 PrintUserInfo(command);
@@ -207,8 +204,6 @@ namespace Client
                 var currentUser = _userService.GetLoggedInUser();
                 DefaultMessage(currentUser);
             }
-
-            
         }
 
         public void AddUser()
