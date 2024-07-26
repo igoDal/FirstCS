@@ -19,10 +19,7 @@ namespace Client
         private readonly IUserService _userService;
         private readonly IMessageService _messageService;
 
-        public bool IsLoggedIn
-        {
-            get { return isLoggedIn; }
-        }
+        public bool IsLoggedIn => _userService.IsLoggedIn;
 
         public ClientSocket(ISocketWrapper socketWrapper, IUserService userService, IMessageService messageService)
         {
@@ -39,7 +36,7 @@ namespace Client
             IPEndPoint localEndpoint = new IPEndPoint(ipAddress, 11111);
             Socket socket = new Socket(ipAddress.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
             ISocketWrapper socketWrapper = new SocketWrapper(socket);
-            IUserService userService = new UserService();
+            IUserService userService = new UserService(socketWrapper);
             IMessageService messageService = new MessageService();
             ClientSocket clientSocket = new ClientSocket(socketWrapper, userService, messageService);
 
@@ -171,9 +168,8 @@ namespace Client
 
             string response = ReceiveJsonData();
             Console.WriteLine(response);
-            var (success, command) = _userService.Login(username, password);
 
-            if (success)
+            if (response.Equals("loggedIn", StringComparison.OrdinalIgnoreCase))
             {
                 Console.WriteLine("\nLogin successful. Awaiting further commands.");
                 isLoggedIn = true;
@@ -208,12 +204,19 @@ namespace Client
 
         public void AddUser()
         {
-            Console.WriteLine("Enter username:");
-            string username = Console.ReadLine();
-            Console.WriteLine("Enter password:");
-            string password = Console.ReadLine();
+            string usernamePrompt = ReceiveJsonData();
+            Console.WriteLine(usernamePrompt);
 
-            string result = _userService.AddUser(username, password);
+            string username = Console.ReadLine();
+            SendData(username);
+
+            string passwordPrompt = ReceiveJsonData();
+            Console.WriteLine(passwordPrompt);
+
+            string password = Console.ReadLine();
+            SendData(password);
+
+            string result = ReceiveJsonData();
             Console.WriteLine(result);
         }
         
