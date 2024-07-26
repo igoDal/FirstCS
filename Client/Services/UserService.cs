@@ -1,14 +1,17 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
+using System.Text;
 using Client.Interfaces;
 using Newtonsoft.Json;
 
 namespace Client.Services;
 
-public class UserService : IUserService
+public class UserService(ISocketWrapper _socketWrapper) : IUserService
     {
         private string currentRole;
         private string loggedInUser;
         private bool isLoggedIn;
+        public bool IsLoggedIn => isLoggedIn;
 
         public string AddUser(string username, string password)
         {
@@ -32,34 +35,31 @@ public class UserService : IUserService
 
             return $"User {username} has been added.";
         }
-
-        public (bool, string) Login(string username, string password)
+        
+        public void Login()
         {
-            var file = $"{username}.json";
-            if (File.Exists(file))
-            {
-                var fileRead = File.ReadAllText(file);
-                var singleUserData = JsonConvert.DeserializeObject<User>(fileRead);
-                string getPassword = singleUserData.Password;
-                currentRole = singleUserData.Role;
-                loggedInUser = singleUserData.Userame;
+            string usernamePrompt = ReceiveJsonData();
+            Console.WriteLine(usernamePrompt);
 
-                if (getPassword.Equals(password))
-                {
-                    isLoggedIn = true;
-                    return (true, "loggedIn");
-                }
-                else
-                {
-                    return (false, "Incorrect password!");
-                }
-            }
-            else
+            string username = Console.ReadLine();
+            SendData(username);
+
+            string passwordPrompt = ReceiveJsonData();
+            Console.WriteLine(passwordPrompt);
+
+            string password = Console.ReadLine();
+            SendData(password);
+
+            string response = ReceiveJsonData();
+            Console.WriteLine(response);
+
+            if (response.Equals("loggedIn", StringComparison.OrdinalIgnoreCase))
             {
-                return (false, "User doesn't exist.");
+                Console.WriteLine("\nLogin successful. Awaiting further commands.");
+                isLoggedIn = true;
             }
         }
-
+        
         public string DeleteUser(string username)
         {
             var file = $"{username}.json";
@@ -111,9 +111,20 @@ public class UserService : IUserService
             loggedInUser = null;
             currentRole = null;
         }
-
-        public bool IsLoggedIn()
+        
+        private void SendData(string data)
         {
-            return isLoggedIn;
+            string jsonData = JsonConvert.SerializeObject(new { command = data });
+            byte[] messageSent = Encoding.ASCII.GetBytes(jsonData);
+            _socketWrapper.Send(messageSent);
+        }
+        
+        private string ReceiveJsonData()
+        {
+            byte[] bytes = new byte[1024];
+            int numByte = _socketWrapper.Receive(bytes);
+            string jsonString = Encoding.ASCII.GetString(bytes, 0, numByte);
+            dynamic jsonResponse = JsonConvert.DeserializeObject(jsonString);
+            return jsonResponse.command;
         }
     }
