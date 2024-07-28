@@ -36,7 +36,7 @@ public class UserService(ISocketWrapper _socketWrapper) : IUserService
             return $"User {username} has been added.";
         }
         
-        public void Login()
+        public bool Login()
         {
             string usernamePrompt = ReceiveJsonData();
             Console.WriteLine(usernamePrompt);
@@ -51,13 +51,17 @@ public class UserService(ISocketWrapper _socketWrapper) : IUserService
             SendData(password);
 
             string response = ReceiveJsonData();
-            Console.WriteLine(response);
 
             if (response.Equals("loggedIn", StringComparison.OrdinalIgnoreCase))
             {
                 Console.WriteLine("\nLogin successful. Awaiting further commands.");
                 isLoggedIn = true;
+                loggedInUser = username;
+                currentRole = "user"; 
+                return true;
             }
+
+            return false;
         }
         
         public string DeleteUser(string username)

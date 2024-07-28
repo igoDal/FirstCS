@@ -4,7 +4,7 @@ public interface IUserService
 {
     bool IsLoggedIn { get; }
     string AddUser(string username, string password);
-    void Login();
+    bool Login();
     string DeleteUser(string username);
     string GetUserInfo(string username);
     string GetCurrentRole();

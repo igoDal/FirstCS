@@ -117,7 +117,11 @@ namespace Client
             if (choice == '1')
             {
                 SendInitialCommand("login");
-                Login();
+                bool loginSuccess = _userService.Login();
+                if (loginSuccess)
+                {
+                    isLoggedIn = true;
+                }
             }
             else if (choice == '2')
             {
