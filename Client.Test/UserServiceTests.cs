@@ -113,4 +113,43 @@ public class UserServiceTests
             Assert.False(result);
             _mockSocketWrapper.Verify(m => m.Send(It.Is<byte[]>(b => Encoding.ASCII.GetString(b).Contains(username))), Times.Once);
         }
+        
+        [Fact]
+        public void DeleteUser_ShouldSendSuccessMessage_WhenUserIsDeletedSuccessfully()
+        {
+            // Arrange
+            var username = "userToDelete";
+            var result = $"User {username} has been deleted.";
+            File.WriteAllText($"{username}.json", "{ \"Userame\": \"userToDelete\", \"Password\": \"password\", \"Role\": \"user\" }");
+
+            var inputSequence = new Queue<string>(new[] { username });
+            Console.SetIn(new StringReader(string.Join(Environment.NewLine, inputSequence)));
+
+            // Act
+            var deleteResult = _userService.DeleteUser(username);
+
+            // Assert
+            Assert.Equal(result, deleteResult);
+
+            if (File.Exists($"{username}.json"))
+            {
+                File.Delete($"{username}.json");
+            }
+        }
+        [Fact]
+        public void DeleteUser_ShouldSendFailureMessage_WhenUserDoesNotExist()
+        {
+            // Arrange
+            var username = "nonexistentuser";
+            var result = $"User {username} does not exist.";
+
+            var inputSequence = new Queue<string>(new[] { username });
+            Console.SetIn(new StringReader(string.Join(Environment.NewLine, inputSequence)));
+
+            // Act
+            var deleteResult = _userService.DeleteUser(username);
+
+            // Assert
+            Assert.Equal(result, deleteResult);
+        }
     }
