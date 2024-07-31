@@ -152,4 +152,40 @@ public class UserServiceTests
             // Assert
             Assert.Equal(result, deleteResult);
         }
+        
+        [Fact]
+        public void GetUserInfo_ShouldReturnCorrectUserInfo_WhenUserExists()
+        {
+            // Arrange
+            var username = "testuser";
+            var password = "password123";
+            var role = "user";
+            var expectedUserInfo = $"Username: {username}\nPassword: {password}\nRole: {role}";
+            File.WriteAllText($"{username}.json", $"{{ \"Userame\": \"{username}\", \"Password\": \"{password}\", \"Role\": \"{role}\" }}");
+
+            // Act
+            var userInfo = _userService.GetUserInfo(username);
+
+            // Assert
+            Assert.Equal(expectedUserInfo, userInfo);
+
+            if (File.Exists($"{username}.json"))
+            {
+                File.Delete($"{username}.json");
+            }
+        }
+
+        [Fact]
+        public void GetUserInfo_ShouldReturnErrorMessage_WhenUserDoesNotExist()
+        {
+            // Arrange
+            var username = "nonexistentuser";
+            var expectedMessage = "User file not found.";
+
+            // Act
+            var userInfo = _userService.GetUserInfo(username);
+
+            // Assert
+            Assert.Equal(expectedMessage, userInfo);
+        }
     }
