@@ -1,5 +1,6 @@
 using System.Text;
 using Client.Interfaces;
+using Client.Services;
 using Moq;
 using Newtonsoft.Json;
 
@@ -7,93 +8,48 @@ namespace Client.Test;
 
 public class ClientSocketTests
     {
-        private readonly Mock<IUserService> _userServiceMock;
-        private readonly Mock<ISocketWrapper> _socketWrapperMock;
+        private readonly Mock<IUserService> _mockUserService;
+        private readonly Mock<ISocketWrapper> _mockSocketWrapper;
         private readonly ClientSocket _clientSocket;
+        private readonly UserService _userService;
+
 
         public ClientSocketTests()
         {
-            _userServiceMock = new Mock<IUserService>();
-            _socketWrapperMock = new Mock<ISocketWrapper>();
-            _clientSocket = new ClientSocket(_socketWrapperMock.Object, _userServiceMock.Object, Mock.Of<IMessageService>());
+            _mockUserService = new Mock<IUserService>();
+            _mockSocketWrapper = new Mock<ISocketWrapper>();
+            _clientSocket = new ClientSocket(_mockSocketWrapper.Object, _mockUserService.Object, Mock.Of<IMessageService>());
+            _userService = new UserService(_mockSocketWrapper.Object);
         }
-
         [Fact]
-        public void PrintUserInfo_ShouldSendUserInfo_WhenUserIsLoggedIn()
+        public void Menu_ShouldTriggerLogin_WhenOption1IsSelected()
         {
             // Arrange
-            var username = "testuser";
-            var userInfo = $"Username: {username}\nPassword: password123\nRole: user";
-
-            _userServiceMock.Setup(us => us.GetLoggedInUser()).Returns(username);
-            _userServiceMock.Setup(us => us.GetUserInfo(username)).Returns(userInfo);
-
-            var command = "user";
-            var jsonCommand = JsonConvert.SerializeObject(new { command });
-            var jsonResponse = JsonConvert.SerializeObject(new { message = "approved" });
-
-            _socketWrapperMock.Setup(sw => sw.Receive(It.IsAny<byte[]>())).Returns(Encoding.ASCII.GetBytes(jsonResponse));
-            _socketWrapperMock.Setup(sw => sw.Send(It.IsAny<byte[]>()));
+            var input = new StringReader("1\n");
+            Console.SetIn(input);
 
             // Act
-            _clientSocket.PrintUserInfo(command);
+            _clientSocket.Menu();
 
             // Assert
-            _socketWrapperMock.Verify(sw => sw.Send(It.Is<byte[]>(b => Encoding.ASCII.GetString(b).Contains(userInfo))), Times.Once);
-        }
-
-        [Fact]
-        public void PrintUserInfo_ShouldSendErrorMessage_WhenNoUserIsLoggedIn()
-        {
-            // Arrange
-            var command = "user";
-            var jsonCommand = JsonConvert.SerializeObject(new { command });
-            var jsonResponse = JsonConvert.SerializeObject(new { message = "No user is currently logged in." });
-
-            _userServiceMock.Setup(us => us.GetLoggedInUser()).Returns((string)null);
-            _socketWrapperMock.Setup(sw => sw.Receive(It.IsAny<byte[]>())).Returns(Encoding.ASCII.GetBytes(jsonResponse));
-            _socketWrapperMock.Setup(sw => sw.Send(It.IsAny<byte[]>()));
-
-            // Act
-            _clientSocket.PrintUserInfo(command);
-
-            // Assert
-            _socketWrapperMock.Verify(sw => sw.Send(It.Is<byte[]>(b => Encoding.ASCII.GetString(b).Contains("No user is currently logged in."))), Times.Once);
+            _mockUserService.Verify(us => us.Login(), Times.Once);
+            _mockSocketWrapper.Verify(sw => sw.Send(It.Is<byte[]>(b => Encoding.ASCII.GetString(b).Contains("login"))), Times.Once);
         }
         
         [Fact]
-        public void AddUser_ShouldSendSuccessMessage_WhenUserIsAddedSuccessfully()
+        public void Menu_ShouldDoNothing_WhenInvalidOptionIsSelected()
         {
             // Arrange
-            var username = "newuser";
-            var password = "password123";
-            var result = $"User {username} has been added.";
-
-            _userServiceMock.Setup(us => us.AddUser(username, password)).Returns(result);
-            _socketWrapperMock.Setup(sw => sw.Send(It.IsAny<byte[]>()));
+            var input = new StringReader("invalid\n");
+            Console.SetIn(input);
 
             // Act
-            _clientSocket.AddUser(username, password);
+            _clientSocket.Menu();
 
             // Assert
-            _socketWrapperMock.Verify(sw => sw.Send(It.Is<byte[]>(b => Encoding.ASCII.GetString(b).Contains(result))), Times.Once);
+            _mockUserService.Verify(us => us.Login(), Times.Never);
+            _mockUserService.Verify(us => us.AddUser(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
+            _mockSocketWrapper.Verify(sw => sw.Send(It.IsAny<byte[]>()), Times.Never);
         }
 
-        [Fact]
-        public void AddUser_ShouldSendErrorMessage_WhenUserAlreadyExists()
-        {
-            // Arrange
-            var username = "existinguser";
-            var password = "password123";
-            var result = $"User {username} already exists.";
-
-            _userServiceMock.Setup(us => us.AddUser(username, password)).Returns(result);
-            _socketWrapperMock.Setup(sw => sw.Send(It.IsAny<byte[]>()));
-
-            // Act
-            _clientSocket.AddUser(username, password);
-
-            // Assert
-            _socketWrapperMock.Verify(sw => sw.Send(It.Is<byte[]>(b => Encoding.ASCII.GetString(b).Contains(result))), Times.Once);
-        }
     }

@@ -109,12 +109,12 @@ namespace Client
             }
         }
 
-        private void Menu()
+        public void Menu()
         {
             Console.WriteLine("\nType '1' to login\nType '2' to create new user\n");
-            char choice = Console.ReadKey().KeyChar;
+            var choice = Console.ReadLine();
             Console.WriteLine();
-            if (choice == '1')
+            if (choice == "1")
             {
                 SendInitialCommand("login");
                 bool loginSuccess = _userService.Login();
@@ -123,7 +123,7 @@ namespace Client
                     isLoggedIn = true;
                 }
             }
-            else if (choice == '2')
+            else if (choice == "2")
             {
                 SendInitialCommand("add");
                 AddUser();
@@ -155,31 +155,7 @@ namespace Client
             _socketWrapper.Send(messageSent);
             continueListening = false;
         }
-
-        public void Login()
-        {
-            string usernamePrompt = ReceiveJsonData();
-            Console.WriteLine(usernamePrompt);
-
-            string username = Console.ReadLine();
-            SendData(username);
-
-            string passwordPrompt = ReceiveJsonData();
-            Console.WriteLine(passwordPrompt);
-
-            string password = Console.ReadLine();
-            SendData(password);
-
-            string response = ReceiveJsonData();
-            Console.WriteLine(response);
-
-            if (response.Equals("loggedIn", StringComparison.OrdinalIgnoreCase))
-            {
-                Console.WriteLine("\nLogin successful. Awaiting further commands.");
-                isLoggedIn = true;
-            }
-        }
-
+        
         public void Logout(string command)
         {
             _userService.Logout();
