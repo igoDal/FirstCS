@@ -147,7 +147,7 @@ namespace Client
             Console.WriteLine(jsonResponse);
         }
 
-        private void Stop(string command)
+        public void Stop(string command)
         {
             string jsonCommand = JsonConvert.SerializeObject(command);
             byte[] messageSent = Encoding.ASCII.GetBytes(jsonCommand);

@@ -102,7 +102,7 @@ namespace Server.Services
             int numByte = _clientSocket.Receive(bytes);
             string jsonString = Encoding.ASCII.GetString(bytes, 0, numByte);
             dynamic jsonResponse = JsonConvert.DeserializeObject(jsonString);
-            return jsonResponse.command;
+            return jsonResponse;
         }
     }
 }

@@ -1,3 +1,4 @@
+using System.Reflection;
 using System.Text;
 using Client.Interfaces;
 using Client.Services;
@@ -51,5 +52,45 @@ public class ClientSocketTests
             _mockUserService.Verify(us => us.AddUser(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
             _mockSocketWrapper.Verify(sw => sw.Send(It.IsAny<byte[]>()), Times.Never);
         }
+        
+        [Fact]
+        public void Logout_ShouldCallUserServiceLogout_AndSetIsLoggedInToFalse()
+        {
+            // Arrange
+            var command = "logout";
+
+            var consoleOutput = new StringWriter();
+            Console.SetOut(consoleOutput);
+
+            // Act
+            _clientSocket.Logout(command);
+
+            // Assert
+            _mockUserService.Verify(us => us.Logout(), Times.Once);
+            Assert.False(_clientSocket.IsLoggedIn);
+
+            var output = consoleOutput.ToString();
+            Assert.Contains("You have been logged out.", output);
+        }
+
+        [Fact]
+        public void Stop_ShouldSendSerializedCommandAndSetContinueListeningToFalse()
+        {
+            // Arrange
+            var command = "stop";
+            var jsonCommand = JsonConvert.SerializeObject(command);
+            var expectedBytes = Encoding.ASCII.GetBytes(jsonCommand);
+
+            // Act
+            _clientSocket.Stop(command);
+
+            // Assert
+            _mockSocketWrapper.Verify(sw => sw.Send(It.Is<byte[]>(b => b.SequenceEqual(expectedBytes))), Times.Once);
+
+            var continueListeningField = typeof(ClientSocket).GetField("continueListening", BindingFlags.NonPublic | BindingFlags.Instance);
+            var continueListeningValue = (bool)continueListeningField.GetValue(_clientSocket);
+            Assert.False(continueListeningValue);
+        }
+
 
     }
