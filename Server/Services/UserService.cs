@@ -39,10 +39,10 @@ public class UserService : IUserService
             var singleUserData = JsonConvert.DeserializeObject<User>(fileRead);
             string getPassword = singleUserData.Password;
             currentRole = singleUserData.Role;
-            loggedInUser = singleUserData.Userame;
 
             if (getPassword.Equals(password))
             {
+                loggedInUser = singleUserData.Userame;
                 isLoggedIn = true;
                 return (true, "loggedIn");
             }
