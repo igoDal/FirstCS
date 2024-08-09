@@ -116,6 +116,33 @@ public class UserService(ISocketWrapper _socketWrapper) : IUserService
             currentRole = null;
         }
         
+        public void PrintUserInfo(string command)
+        {
+            SendData(command);
+
+            string encodingString = ReceiveJsonData();
+
+            if (encodingString.ToLower().Equals("approved"))
+            {
+                Console.WriteLine("\nEnter username you'd like to check");
+                string username = Console.ReadLine();
+                DefaultMessage(username);
+            }
+            else
+            {
+                var currentUser = GetLoggedInUser();
+                DefaultMessage(currentUser);
+            }
+        }
+        
+        private void DefaultMessage(string command)
+        {
+            SendData(command);
+
+            string jsonResponse = ReceiveJsonData();
+            Console.WriteLine(jsonResponse);
+        }
+        
         private void SendData(string data)
         {
             string jsonData = JsonConvert.SerializeObject(new { command = data });

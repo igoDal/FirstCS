@@ -82,7 +82,7 @@ namespace Client
                                 _messageService.ReadMessage(_socketWrapper);
                                 break;
                             case "user":
-                                PrintUserInfo(command);
+                                _userService.PrintUserInfo(command);
                                 break;
                             default:
                                 DefaultMessage(command);

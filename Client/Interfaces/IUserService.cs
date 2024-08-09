@@ -10,4 +10,5 @@ public interface IUserService
     string GetCurrentRole();
     string GetLoggedInUser();
     void Logout();
+    void PrintUserInfo(string command);
 }

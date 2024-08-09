@@ -211,4 +211,47 @@ public class UserServiceTests
 
         _mockSocketWrapper.Verify(m => m.Send(It.IsAny<byte[]>()), Times.Exactly(2));
     }
+    
+    [Fact]
+    public void PrintUserInfo_ShouldRequestAndPrintAnotherUserInfo_WhenResponseIsApproved()
+    {
+        // Arrange
+        var command = "user";
+        var approvedResponse = Encoding.ASCII.GetBytes(JsonConvert.SerializeObject(new { command = "approved" }));
+        var otherUsername = "otheruser";
+        var otherUserInfo = $"Username: {otherUsername}\nPassword: password456\nRole: user";
+        var userInfoResponse = Encoding.ASCII.GetBytes(JsonConvert.SerializeObject(new { command = otherUserInfo }));
+
+        var responseQueue = new Queue<byte[]>();
+        responseQueue.Enqueue(approvedResponse);
+        responseQueue.Enqueue(userInfoResponse);
+
+        _mockSocketWrapper.Setup(m => m.Receive(It.IsAny<byte[]>()))
+            .Callback<byte[]>(buffer =>
+            {
+                if (responseQueue.Count > 0)
+                {
+                    var response = responseQueue.Dequeue();
+                    Array.Copy(response, buffer, response.Length);
+                }
+            })
+            .Returns((byte[] buffer) => buffer.Length);
+
+        var input = new Queue<string>(new[] { otherUsername });
+        Console.SetIn(new StringReader(string.Join(Environment.NewLine, input)));
+
+        var consoleOutput = new StringWriter();
+        Console.SetOut(consoleOutput);
+
+        // Act
+        _userService.PrintUserInfo(command);
+
+        // Assert
+        Assert.Contains(otherUserInfo, consoleOutput.ToString());
+
+        _mockSocketWrapper.Verify(m => m.Send(It.Is<byte[]>(b => Encoding.ASCII.GetString(b).Contains(command))), Times.Once);
+        _mockSocketWrapper.Verify(m => m.Send(It.Is<byte[]>(b => Encoding.ASCII.GetString(b).Contains(otherUsername))), Times.Once);
+    }
+
+    
 }
