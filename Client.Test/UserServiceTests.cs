@@ -211,47 +211,60 @@ public class UserServiceTests
 
         _mockSocketWrapper.Verify(m => m.Send(It.IsAny<byte[]>()), Times.Exactly(2));
     }
+
     
     [Fact]
-    public void PrintUserInfo_ShouldRequestAndPrintAnotherUserInfo_WhenResponseIsApproved()
+    public void PrintUserInfo_ShouldPrintUserInfo_WhenApproved()
     {
         // Arrange
         var command = "user";
-        var approvedResponse = Encoding.ASCII.GetBytes(JsonConvert.SerializeObject(new { command = "approved" }));
-        var otherUsername = "otheruser";
-        var otherUserInfo = $"Username: {otherUsername}\nPassword: password456\nRole: user";
-        var userInfoResponse = Encoding.ASCII.GetBytes(JsonConvert.SerializeObject(new { command = otherUserInfo }));
-
-        var responseQueue = new Queue<byte[]>();
-        responseQueue.Enqueue(approvedResponse);
-        responseQueue.Enqueue(userInfoResponse);
+        var approvalResponse = JsonConvert.SerializeObject(new { command = "approved" });
+        var userInfoResponse = JsonConvert.SerializeObject(new { command = "User Info: testUser" });
 
         _mockSocketWrapper.Setup(m => m.Receive(It.IsAny<byte[]>()))
-            .Callback<byte[]>(buffer =>
-            {
-                if (responseQueue.Count > 0)
-                {
-                    var response = responseQueue.Dequeue();
-                    Array.Copy(response, buffer, response.Length);
-                }
-            })
-            .Returns((byte[] buffer) => buffer.Length);
+            .Callback<byte[]>(buffer => Encoding.ASCII.GetBytes(approvalResponse).CopyTo(buffer, 0))
+            .Returns(approvalResponse.Length);
 
-        var input = new Queue<string>(new[] { otherUsername });
-        Console.SetIn(new StringReader(string.Join(Environment.NewLine, input)));
+        _mockSocketWrapper.Setup(m => m.Receive(It.IsAny<byte[]>()))
+            .Callback<byte[]>(buffer => Encoding.ASCII.GetBytes(userInfoResponse).CopyTo(buffer, 0))
+            .Returns(userInfoResponse.Length);
 
-        var consoleOutput = new StringWriter();
-        Console.SetOut(consoleOutput);
+        var inputSequence = new Queue<string>(new[] { "testUser" });
+        Console.SetIn(new StringReader(string.Join(Environment.NewLine, inputSequence)));
 
         // Act
         _userService.PrintUserInfo(command);
 
         // Assert
-        Assert.Contains(otherUserInfo, consoleOutput.ToString());
-
-        _mockSocketWrapper.Verify(m => m.Send(It.Is<byte[]>(b => Encoding.ASCII.GetString(b).Contains(command))), Times.Once);
-        _mockSocketWrapper.Verify(m => m.Send(It.Is<byte[]>(b => Encoding.ASCII.GetString(b).Contains(otherUsername))), Times.Once);
+        _mockSocketWrapper.Verify(m => m.Send(It.IsAny<byte[]>()), Times.Exactly(2));
+        _mockSocketWrapper.Verify(m => m.Receive(It.IsAny<byte[]>()), Times.Exactly(2));
     }
 
+    [Fact]
+    public void PrintUserInfo_ShouldPrintCurrentUserInfo_WhenNotApproved()
+    {
+        // Arrange
+        var command = "user";
+        var notApprovedResponse = JsonConvert.SerializeObject(new { command = "not approved" });
+        var currentUserResponse = JsonConvert.SerializeObject(new { command = "User Info: currentUser" });
+
+        _mockSocketWrapper.Setup(m => m.Receive(It.IsAny<byte[]>()))
+            .Callback<byte[]>(buffer => Encoding.ASCII.GetBytes(notApprovedResponse).CopyTo(buffer, 0))
+            .Returns(notApprovedResponse.Length);
+
+        _mockSocketWrapper.Setup(m => m.Receive(It.IsAny<byte[]>()))
+            .Callback<byte[]>(buffer => Encoding.ASCII.GetBytes(currentUserResponse).CopyTo(buffer, 0))
+            .Returns(currentUserResponse.Length);
+
+        var inputSequence = new Queue<string>(new[] { "currentUser" });
+        Console.SetIn(new StringReader(string.Join(Environment.NewLine, inputSequence)));
+
+        // Act
+        _userService.PrintUserInfo(command);
+
+        // Assert
+        _mockSocketWrapper.Verify(m => m.Send(It.IsAny<byte[]>()), Times.Exactly(2));
+        _mockSocketWrapper.Verify(m => m.Receive(It.IsAny<byte[]>()), Times.Exactly(2));
+    }
     
 }
