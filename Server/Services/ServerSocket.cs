@@ -175,7 +175,7 @@ namespace Server.Services
         }
 
 
-        private void PrintUserInfo()
+        public void PrintUserInfo()
         {
             string loggedInUser = userService.GetLoggedInUser();
             var role = userService.GetCurrentRole();
