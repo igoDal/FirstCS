@@ -49,7 +49,7 @@ public class ClientSocketTests
 
             // Assert
             _mockUserService.Verify(us => us.Login(), Times.Never);
-            _mockUserService.Verify(us => us.AddUser(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
+            _mockUserService.Verify(us => us.AddUser(), Times.Never);
             _mockSocketWrapper.Verify(sw => sw.Send(It.IsAny<byte[]>()), Times.Never);
         }
         

@@ -67,7 +67,7 @@ namespace Client
                         switch (command)
                         {
                             case "add":
-                                AddUser();
+                                _userService.AddUser();
                                 break;
                             case "logout":
                                 Logout(command);
@@ -126,7 +126,7 @@ namespace Client
             else if (choice == "2")
             {
                 SendInitialCommand("add");
-                AddUser();
+                _userService.AddUser();
             }
             else
             {
@@ -163,42 +163,7 @@ namespace Client
             Console.WriteLine("You have been logged out.");
         }
 
-        public void PrintUserInfo(string command)
-        {
-            SendData(command);
-
-            string encodingString = ReceiveJsonData();
-
-            if (encodingString.ToLower().Equals("approved"))
-            {
-                Console.WriteLine("\nEnter username you'd like to check");
-                string username = Console.ReadLine();
-                DefaultMessage(username);
-            }
-            else
-            {
-                var currentUser = _userService.GetLoggedInUser();
-                DefaultMessage(currentUser);
-            }
-        }
-
-        public void AddUser()
-        {
-            string usernamePrompt = ReceiveJsonData();
-            Console.WriteLine(usernamePrompt);
-
-            string username = Console.ReadLine();
-            SendData(username);
-
-            string passwordPrompt = ReceiveJsonData();
-            Console.WriteLine(passwordPrompt);
-
-            string password = Console.ReadLine();
-            SendData(password);
-
-            string result = ReceiveJsonData();
-            Console.WriteLine(result);
-        }
+        
         
         public string ReceiveJsonData()
         {

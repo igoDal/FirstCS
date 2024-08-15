@@ -13,27 +13,22 @@ public class UserService(ISocketWrapper _socketWrapper) : IUserService
         private bool isLoggedIn;
         public bool IsLoggedIn => isLoggedIn;
 
-        public string AddUser(string username, string password)
+        public string AddUser()
         {
-            if (File.Exists($"{username}.json"))
-            {
-                return $"User {username} already exists.";
-            }
+            string usernamePrompt = ReceiveJsonData();
+            Console.WriteLine(usernamePrompt);
 
-            User user = new User()
-            {
-                Userame = username,
-                Password = password,
-                Role = "user"
-            };
+            string username = Console.ReadLine();
+            SendData(username);
 
-            using (StreamWriter file = File.CreateText($"{username}.json"))
-            {
-                JsonSerializer serializer = new JsonSerializer();
-                serializer.Serialize(file, user);
-            }
+            string passwordPrompt = ReceiveJsonData();
+            Console.WriteLine(passwordPrompt);
 
-            return $"User {username} has been added.";
+            string password = Console.ReadLine();
+            SendData(password);
+
+            string result = ReceiveJsonData();
+            return result;
         }
         
         public bool Login()

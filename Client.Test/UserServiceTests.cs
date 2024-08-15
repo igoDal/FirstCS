@@ -56,55 +56,7 @@ public class UserServiceTests
         Assert.Equal(result, deleteResult);
     }
     
-    [Fact]
-    public void AddUser_ShouldReturnSuccessMessage_WhenUserIsAddedSuccessfully()
-    {
-        // Arrange
-        var username = "newuser";
-        var password = "password123";
-        var expectedMessage = $"User {username} has been added.";
-
-        if (File.Exists($"{username}.json"))
-        {
-            File.Delete($"{username}.json");
-        }
-
-        // Act
-        var result = _userService.AddUser(username, password);
-
-        // Assert
-        Assert.Equal(expectedMessage, result);
-        Assert.True(File.Exists($"{username}.json"));
-
-        // Clean up
-        if (File.Exists($"{username}.json"))
-        {
-            File.Delete($"{username}.json");
-        }
-    }
-
-    [Fact]
-    public void AddUser_ShouldReturnErrorMessage_WhenUserAlreadyExists()
-    {
-        // Arrange
-        var username = "existinguser";
-        var password = "password123";
-        var expectedMessage = $"User {username} already exists.";
-
-        File.WriteAllText($"{username}.json", $"{{ \"Userame\": \"{username}\", \"Password\": \"{password}\", \"Role\": \"user\" }}");
-
-        // Act
-        var result = _userService.AddUser(username, password);
-
-        // Assert
-        Assert.Equal(expectedMessage, result);
-
-        // Clean up
-        if (File.Exists($"{username}.json"))
-        {
-            File.Delete($"{username}.json");
-        }
-    }
+    
     
     [Fact]
     public void GetUserInfo_ShouldReturnCorrectUserInfo_WhenUserExists()
@@ -267,4 +219,87 @@ public class UserServiceTests
         _mockSocketWrapper.Verify(m => m.Receive(It.IsAny<byte[]>()), Times.Exactly(2));
     }
     
+    [Fact]
+    public void AddUser_ShouldReturnSuccessMessage_WhenUserIsAddedSuccessfully()
+    {
+        // Arrange
+        var usernamePrompt = JsonConvert.SerializeObject(new { command = "Enter username:" });
+        var passwordPrompt = JsonConvert.SerializeObject(new { command = "Enter password:" });
+        var addUserResponse = JsonConvert.SerializeObject(new { command = "User added successfully." });
+
+        var receiveCount = 0;
+        _mockSocketWrapper.Setup(m => m.Receive(It.IsAny<byte[]>()))
+            .Callback<byte[]>(buffer =>
+            {
+                string response = receiveCount switch
+                {
+                    0 => usernamePrompt,
+                    1 => passwordPrompt,
+                    2 => addUserResponse,
+                    _ => string.Empty
+                };
+
+                Encoding.ASCII.GetBytes(response).CopyTo(buffer, 0);
+                receiveCount++;
+            })
+            .Returns(() => receiveCount switch
+            {
+                1 => usernamePrompt.Length,
+                2 => passwordPrompt.Length,
+                3 => addUserResponse.Length,
+                _ => 0
+            });
+
+        var inputSequence = new Queue<string>(new[] { "newUser", "newPassword" });
+        Console.SetIn(new StringReader(string.Join(Environment.NewLine, inputSequence)));
+
+        // Act
+        var result = _userService.AddUser();
+
+        // Assert
+        Assert.Equal("User added successfully.", result);
+        _mockSocketWrapper.Verify(m => m.Send(It.IsAny<byte[]>()), Times.Exactly(2));
+    }
+    
+    [Fact]
+    public void AddUser_ShouldReturnFailureMessage_WhenUserAdditionFails()
+    {
+        // Arrange
+        var usernamePrompt = JsonConvert.SerializeObject(new { command = "Enter username:" });
+        var passwordPrompt = JsonConvert.SerializeObject(new { command = "Enter password:" });
+        var addUserResponse = JsonConvert.SerializeObject(new { command = "Failed to add user." });
+
+        var receiveCount = 0;
+        _mockSocketWrapper.Setup(m => m.Receive(It.IsAny<byte[]>()))
+            .Callback<byte[]>(buffer =>
+            {
+                string response = receiveCount switch
+                {
+                    0 => usernamePrompt,
+                    1 => passwordPrompt,
+                    2 => addUserResponse,
+                    _ => string.Empty
+                };
+
+                Encoding.ASCII.GetBytes(response).CopyTo(buffer, 0);
+                receiveCount++;
+            })
+            .Returns(() => receiveCount switch
+            {
+                1 => usernamePrompt.Length,
+                2 => passwordPrompt.Length,
+                3 => addUserResponse.Length,
+                _ => 0
+            });
+
+        var inputSequence = new Queue<string>(new[] { "newUser", "newPassword" });
+        Console.SetIn(new StringReader(string.Join(Environment.NewLine, inputSequence)));
+
+        // Act
+        var result = _userService.AddUser();
+
+        // Assert
+        Assert.Equal("Failed to add user.", result);
+        _mockSocketWrapper.Verify(m => m.Send(It.IsAny<byte[]>()), Times.Exactly(2));
+    }
 }
