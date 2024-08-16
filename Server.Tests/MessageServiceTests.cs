@@ -11,6 +11,21 @@ namespace Server.Tests
 {
     public class MessageServiceTests
     {
+        
+        private readonly string _userFile;
+        private readonly string _messageFile;
+        private readonly Mock<ISocketWrapper> _mockSocket;
+        private readonly MessageService _service;
+
+        public MessageServiceTests()
+        {
+            _userFile = $"testUser.json";
+            _messageFile = $"testUser_msg.txt";
+            _mockSocket = new Mock<ISocketWrapper>();
+            _service = new MessageService();
+            _service.SetClientSocket(_mockSocket.Object);
+        }
+        
         [Fact]
         public void SendMessage_ShouldSendCorrectMessage()
         {
@@ -141,6 +156,53 @@ namespace Server.Tests
             File.Delete("testUser123.json");
             File.Delete("testUser123_msg.txt");
         }
+        
+        [Fact]
+        public void ReadMessage_ShouldReturnMessage_WhenMessageIsAvailable()
+        {
+            // Arrange
+            string expectedMessage = "Test Message";
+            File.WriteAllText(_userFile, JsonConvert.SerializeObject(new { Userame = "testUser", Password = "password", Role = "user" }));
+            File.WriteAllLines(_messageFile, new[] { expectedMessage });
 
+            byte[] capturedMessage = null;
+            _mockSocket.Setup(socket => socket.Send(It.IsAny<byte[]>()))
+                .Callback<byte[]>(msg => capturedMessage = msg);
+
+            // Act
+            _service.ReadMessage("testUser");
+
+            // Assert
+            string jsonExpectedMessage = JsonConvert.SerializeObject(expectedMessage);
+            byte[] expectedMessageBytes = Encoding.ASCII.GetBytes(jsonExpectedMessage);
+
+            Assert.NotNull(capturedMessage);
+            Assert.Equal(Encoding.ASCII.GetString(expectedMessageBytes), Encoding.ASCII.GetString(capturedMessage));
+
+            string[] remainingMessages = File.ReadAllLines(_messageFile);
+            Assert.Empty(remainingMessages);
+        }
+        [Fact]
+        public void ReadMessage_ShouldReturnNoNewMessages_WhenFileIsEmpty()
+        {
+            // Arrange
+            File.WriteAllText(_userFile, JsonConvert.SerializeObject(new { Userame = "testUser", Password = "password", Role = "user" }));
+            File.WriteAllText(_messageFile, string.Empty);
+
+            byte[] capturedMessage = null;
+            _mockSocket.Setup(socket => socket.Send(It.IsAny<byte[]>()))
+                .Callback<byte[]>(msg => capturedMessage = msg);
+
+            // Act
+            _service.ReadMessage("testUser");
+
+            // Assert
+            string expectedMessage = "There are no new messages.";
+            string jsonExpectedMessage = JsonConvert.SerializeObject(expectedMessage);
+            byte[] expectedMessageBytes = Encoding.ASCII.GetBytes(jsonExpectedMessage);
+
+            Assert.NotNull(capturedMessage);
+            Assert.Equal(Encoding.ASCII.GetString(expectedMessageBytes), Encoding.ASCII.GetString(capturedMessage));
+        }
     }
 }
