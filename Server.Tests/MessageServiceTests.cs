@@ -204,5 +204,46 @@ namespace Server.Tests
             Assert.NotNull(capturedMessage);
             Assert.Equal(Encoding.ASCII.GetString(expectedMessageBytes), Encoding.ASCII.GetString(capturedMessage));
         }
+        [Fact]
+        public void ReadMessage_ShouldReturnNoNewMessages_WhenMessageFileDoesNotExist()
+        {
+            // Arrange
+            File.WriteAllText(_userFile, JsonConvert.SerializeObject(new { Userame = "testUser0", Password = "password", Role = "user" }));
+
+            byte[] capturedMessage = null;
+            _mockSocket.Setup(socket => socket.Send(It.IsAny<byte[]>()))
+                .Callback<byte[]>(msg => capturedMessage = msg);
+
+            // Act
+            _service.ReadMessage("testUser0");
+
+            // Assert
+            string expectedMessage = "There are no new messages.";
+            string jsonExpectedMessage = JsonConvert.SerializeObject(expectedMessage);
+            byte[] expectedMessageBytes = Encoding.ASCII.GetBytes(jsonExpectedMessage);
+
+            Assert.NotNull(capturedMessage);
+            Assert.Equal(Encoding.ASCII.GetString(expectedMessageBytes), Encoding.ASCII.GetString(capturedMessage));
+        }
+
+        [Fact]
+        public void ReadMessage_ShouldReturnNoNewMessages_WhenUserFileDoesNotExist()
+        {
+            // Arrange
+            byte[] capturedMessage = null;
+            _mockSocket.Setup(socket => socket.Send(It.IsAny<byte[]>()))
+                .Callback<byte[]>(msg => capturedMessage = msg);
+
+            // Act
+            _service.ReadMessage("nonexistentUser");
+
+            // Assert
+            string expectedMessage = "There are no new messages.";
+            string jsonExpectedMessage = JsonConvert.SerializeObject(expectedMessage);
+            byte[] expectedMessageBytes = Encoding.ASCII.GetBytes(jsonExpectedMessage);
+
+            Assert.NotNull(capturedMessage);
+            Assert.Equal(Encoding.ASCII.GetString(expectedMessageBytes), Encoding.ASCII.GetString(capturedMessage));
+        }
     }
 }
