@@ -119,4 +119,70 @@ public class MessageServiceTests
         mockSocket.Verify(socket => socket.Send(It.IsAny<byte[]>()), Times.Exactly(3));
         mockSocket.Verify(socket => socket.Receive(It.IsAny<byte[]>()), Times.Exactly(3));
     }
+    
+    [Fact]
+    public void ReadMessage_ShouldDisplayMessage_WhenMessageIsAvailable()
+    {
+        // Arrange
+        var mockSocket = new Mock<ISocketWrapper>();
+        var messageService = new MessageService();
+        messageService.SetClientSocket(mockSocket.Object);
+
+        var receiveSequence = new Queue<string>(new[]
+        {
+            "Test Message"
+        });
+
+        mockSocket.Setup(socket => socket.Receive(It.IsAny<byte[]>()))
+            .Returns((byte[] buffer) =>
+            {
+                if (receiveSequence.Count == 0)
+                    return 0; 
+
+                var message = JsonConvert.SerializeObject(receiveSequence.Dequeue());
+                var messageBytes = Encoding.ASCII.GetBytes(message);
+                Array.Copy(messageBytes, buffer, messageBytes.Length);
+                return messageBytes.Length;
+            });
+
+        // Act
+        messageService.ReadMessage(mockSocket.Object);
+
+        // Assert
+        mockSocket.Verify(socket => socket.Send(It.IsAny<byte[]>()), Times.Once);
+        mockSocket.Verify(socket => socket.Receive(It.IsAny<byte[]>()), Times.Once);
+    }
+    
+    [Fact]
+    public void ReadMessage_ShouldDisplayNoNewMessages_WhenNoMessagesExist()
+    {
+        // Arrange
+        var mockSocket = new Mock<ISocketWrapper>();
+        var messageService = new MessageService();
+        messageService.SetClientSocket(mockSocket.Object);
+
+        var receiveSequence = new Queue<string>(new[]
+        {
+            "There are no new messages."
+        });
+
+        mockSocket.Setup(socket => socket.Receive(It.IsAny<byte[]>()))
+            .Returns((byte[] buffer) =>
+            {
+                if (receiveSequence.Count == 0)
+                    return 0;
+
+                var message = JsonConvert.SerializeObject(receiveSequence.Dequeue());
+                var messageBytes = Encoding.ASCII.GetBytes(message);
+                Array.Copy(messageBytes, buffer, messageBytes.Length);
+                return messageBytes.Length;
+            });
+
+        // Act
+        messageService.ReadMessage(mockSocket.Object);
+
+        // Assert
+        mockSocket.Verify(socket => socket.Send(It.IsAny<byte[]>()), Times.Once);
+        mockSocket.Verify(socket => socket.Receive(It.IsAny<byte[]>()), Times.Once);
+    }
 }
