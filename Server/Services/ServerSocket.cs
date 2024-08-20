@@ -9,7 +9,7 @@ using Server.Interfaces;
 
 namespace Server.Services
 {
-    public class ServerSocket : IServerSocket
+    public class ServerSocket
     {
         private ISocketWrapper clientSocket;
         private readonly static string serverVersion = "0.0.3";

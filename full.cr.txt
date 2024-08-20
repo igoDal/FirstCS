@@ -1,0 +1,2307 @@
+FILE: IMessageService.cs
+
+namespace Client.Interfaces;
+
+public interface IMessageService
+{
+    void SetClientSocket(ISocketWrapper socket);
+    void SendMessage(ISocketWrapper socketWrapper);
+    void ReadMessage(ISocketWrapper socketWrapper);
+}
+
+============================
+FILE: ISocketWrapper.cs
+
+using System.Net;
+
+namespace Client.Interfaces;
+
+public interface ISocketWrapper
+{
+    int Send(byte[] buffer);
+    int Receive(byte[] buffer);
+    void Connect(EndPoint remoteEndpoint);
+    void Close();
+}
+
+============================
+FILE: IUserService.cs
+
+namespace Client.Interfaces;
+
+public interface IUserService
+{
+    bool IsLoggedIn { get; }
+    string AddUser();
+    bool Login();
+    string DeleteUser(string username);
+    string GetUserInfo(string username);
+    string GetCurrentRole();
+    string GetLoggedInUser();
+    void Logout();
+    void PrintUserInfo(string command);
+}
+
+
+=============================
+FILE: MessageService.cs
+
+using System;
+using System.Text;
+using Client.Interfaces;
+using Newtonsoft.Json;
+
+namespace Client.Services;
+
+public class MessageService : IMessageService
+{
+    private ISocketWrapper clientSocket;
+
+    public void SetClientSocket(ISocketWrapper socket)
+    {
+        clientSocket = socket;
+    }
+
+    public void SendMessage(ISocketWrapper socketWrapper)
+    {
+        SendData("msg");
+        
+        var request = ReceiveJsonData();
+            
+        Console.WriteLine($"{request}");
+        var username = Console.ReadLine();
+        
+        SendData(username);
+        
+        var msg = ReceiveJsonData();
+        Console.WriteLine($"{msg}");
+
+        var userMsg = Console.ReadLine();
+        SendData(userMsg);
+        
+        var confirmation = ReceiveJsonData();
+        Console.WriteLine($"{confirmation}");
+    }
+
+    public void ReadMessage(ISocketWrapper socketWrapper)
+    {
+        SendData("read");
+        
+        var msg = ReceiveJsonData();
+        Console.WriteLine($"Message: {msg}");
+    }
+    private void SendData(string data)
+    {
+        string jsonData = JsonConvert.SerializeObject(new { command = data });
+        byte[] messageSent = Encoding.ASCII.GetBytes(jsonData);
+        clientSocket.Send(messageSent);
+    }
+    private string ReceiveJsonData()
+    {
+        byte[] buffer = new byte[1024];
+        int bytesReceived = clientSocket.Receive(buffer);
+        string jsonString = Encoding.ASCII.GetString(buffer, 0, bytesReceived);
+        dynamic response = JsonConvert.DeserializeObject(jsonString);
+        return response;
+    }
+}
+
+==========================
+FILE: SocketWrapper.cs
+
+using System.Net;
+using System.Net.Sockets;
+using Client.Interfaces;
+
+namespace Client.Services;
+
+public class SocketWrapper : ISocketWrapper
+{
+    private readonly Socket _socket;
+
+    public SocketWrapper(Socket socket)
+    {
+        _socket = socket;
+    }
+
+    public int Send(byte[] buffer)
+    {
+        return _socket.Send(buffer);
+    }
+
+    public int Receive(byte[] buffer)
+    {
+        return _socket.Receive(buffer);
+    }
+    public void Connect(EndPoint remoteEndpoint)
+    {
+        _socket.Connect(remoteEndpoint);
+    }
+    public void Close()
+    {
+        _socket.Close();
+    }
+}
+
+=========================
+FILE: UserService.cs
+
+using System;
+using System.IO;
+using System.Text;
+using Client.Interfaces;
+using Newtonsoft.Json;
+
+namespace Client.Services;
+
+public class UserService(ISocketWrapper _socketWrapper) : IUserService
+    {
+        private string currentRole;
+        private string loggedInUser;
+        private bool isLoggedIn;
+        public bool IsLoggedIn => isLoggedIn;
+
+        public string AddUser()
+        {
+            string usernamePrompt = ReceiveJsonData();
+            Console.WriteLine(usernamePrompt);
+
+            string username = Console.ReadLine();
+            SendData(username);
+
+            string passwordPrompt = ReceiveJsonData();
+            Console.WriteLine(passwordPrompt);
+
+            string password = Console.ReadLine();
+            SendData(password);
+
+            string result = ReceiveJsonData();
+            return result;
+        }
+        
+        public bool Login()
+        {
+            string usernamePrompt = ReceiveJsonData();
+            Console.WriteLine(usernamePrompt);
+
+            string username = Console.ReadLine();
+            SendData(username);
+
+            string passwordPrompt = ReceiveJsonData();
+            Console.WriteLine(passwordPrompt);
+
+            string password = Console.ReadLine();
+            SendData(password);
+
+            string response = ReceiveJsonData();
+
+            if (response.Equals("loggedIn", StringComparison.OrdinalIgnoreCase))
+            {
+                Console.WriteLine("\nLogin successful. Awaiting further commands.");
+                isLoggedIn = true;
+                loggedInUser = username;
+                currentRole = "user"; 
+                return true;
+            }
+
+            return false;
+        }
+        
+        public string DeleteUser(string username)
+        {
+            var file = $"{username}.json";
+            if (File.Exists(file))
+            {
+                File.Delete(file);
+                var msgFile = $"{username}_msg.txt";
+                if (File.Exists(msgFile))
+                {
+                    File.Delete(msgFile);
+                }
+                return $"User {username} has been deleted.";
+            }
+            else
+            {
+                return $"User {username} does not exist.";
+            }
+        }
+
+        public string GetUserInfo(string username)
+        {
+            var file = $"{username}.json";
+            if (File.Exists(file))
+            {
+                var fileRead = File.ReadAllText(file);
+                var singleUserData = JsonConvert.DeserializeObject<User>(fileRead);
+
+                return $"Username: {singleUserData.Userame}\nPassword: {singleUserData.Password}\nRole: {singleUserData.Role}";
+            }
+            else
+            {
+                return "User file not found.";
+            }
+        }
+
+        public string GetCurrentRole()
+        {
+            return currentRole;
+        }
+
+        public string GetLoggedInUser()
+        {
+            return loggedInUser;
+        }
+
+        public void Logout()
+        {
+            isLoggedIn = false;
+            loggedInUser = null;
+            currentRole = null;
+        }
+        
+        public void PrintUserInfo(string command)
+        {
+            SendData(command);
+
+            string encodingString = ReceiveJsonData();
+
+            if (encodingString.ToLower().Equals("approved"))
+            {
+                Console.WriteLine("\nEnter username you'd like to check");
+                string username = Console.ReadLine();
+                DefaultMessage(username);
+            }
+            else
+            {
+                var currentUser = GetLoggedInUser();
+                DefaultMessage(currentUser);
+            }
+        }
+        
+        private void DefaultMessage(string command)
+        {
+            SendData(command);
+
+            string jsonResponse = ReceiveJsonData();
+            Console.WriteLine(jsonResponse);
+        }
+        
+        private void SendData(string data)
+        {
+            string jsonData = JsonConvert.SerializeObject(new { command = data });
+            byte[] messageSent = Encoding.ASCII.GetBytes(jsonData);
+            _socketWrapper.Send(messageSent);
+        }
+        
+        private string ReceiveJsonData()
+        {
+            byte[] bytes = new byte[1024];
+            int numByte = _socketWrapper.Receive(bytes);
+            string jsonString = Encoding.ASCII.GetString(bytes, 0, numByte);
+            dynamic jsonResponse = JsonConvert.DeserializeObject(jsonString);
+            return jsonResponse.command;
+        }
+    }
+
+
+=============================
+FILE: ClientSocket.cs
+
+using System.Configuration;
+using System.Collections.Specialized;
+using System;
+using System.IO;
+using System.Net;
+using System.Net.Sockets;
+using System.Text;
+using Client.Interfaces;
+using Client.Services;
+using Newtonsoft.Json;
+
+namespace Client
+{
+    public class ClientSocket
+    {
+        private bool isLoggedIn = false;
+        private bool continueListening = true;
+        private ISocketWrapper _socketWrapper;
+        private readonly IUserService _userService;
+        private readonly IMessageService _messageService;
+
+        public bool IsLoggedIn => _userService.IsLoggedIn;
+
+        public ClientSocket(ISocketWrapper socketWrapper, IUserService userService, IMessageService messageService)
+        {
+            _socketWrapper = socketWrapper;
+            _userService = userService;
+            _messageService = messageService;
+
+        }
+
+        static void Main(string[] args)
+        {
+            IPHostEntry ipHost = Dns.GetHostEntry(Dns.GetHostName());
+            IPAddress ipAddress = ipHost.AddressList[0];
+            IPEndPoint localEndpoint = new IPEndPoint(ipAddress, 11111);
+            Socket socket = new Socket(ipAddress.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
+            ISocketWrapper socketWrapper = new SocketWrapper(socket);
+            IUserService userService = new UserService(socketWrapper);
+            IMessageService messageService = new MessageService();
+            ClientSocket clientSocket = new ClientSocket(socketWrapper, userService, messageService);
+
+            clientSocket.ExecuteClient(localEndpoint);
+        }
+
+        public void ExecuteClient(IPEndPoint localEndpoint)
+        {
+            try
+            {
+                _socketWrapper.Connect(localEndpoint);
+                _messageService.SetClientSocket(_socketWrapper);
+                Console.WriteLine("Socket connected to -> {0}", localEndpoint.ToString());
+
+                while (continueListening)
+                {
+                    if (!isLoggedIn)
+                    {
+                        Menu();
+                    }
+
+                    while (isLoggedIn)
+                    {
+                        string commandPrompt = ReceiveJsonData();
+                        Console.WriteLine(commandPrompt);
+
+                        string command = Console.ReadLine();
+                        switch (command)
+                        {
+                            case "add":
+                                _userService.AddUser();
+                                break;
+                            case "logout":
+                                Logout(command);
+                                break;
+                            case "stop":
+                                Stop(command);
+                                break;
+                            case "msg":
+                                _messageService.SendMessage(_socketWrapper);
+                                break;
+                            case "read":
+                                _messageService.ReadMessage(_socketWrapper);
+                                break;
+                            case "user":
+                                _userService.PrintUserInfo(command);
+                                break;
+                            default:
+                                DefaultMessage(command);
+                                break;
+                        }
+                        if (!continueListening)
+                            break;
+                    }
+                }
+            }
+            catch (ArgumentNullException ane)
+            {
+                Console.WriteLine("ArgumentNullException ; {0}", ane.ToString());
+            }
+
+            catch (SocketException se)
+            {
+                Console.WriteLine("Socketxception : {0}", se.ToString());
+            }
+
+            catch (Exception e)
+            {
+                Console.WriteLine("Unexpected exception : {0}", e.ToString());
+            }
+        }
+
+        public void Menu()
+        {
+            Console.WriteLine("\nType '1' to login\nType '2' to create new user\n");
+            var choice = Console.ReadLine();
+            Console.WriteLine();
+            if (choice == "1")
+            {
+                SendInitialCommand("login");
+                bool loginSuccess = _userService.Login();
+                if (loginSuccess)
+                {
+                    isLoggedIn = true;
+                }
+            }
+            else if (choice == "2")
+            {
+                SendInitialCommand("add");
+                _userService.AddUser();
+            }
+            else
+            {
+                return;
+            }
+        }
+        private void SendInitialCommand(string command)
+        {
+            string jsonCommand = JsonConvert.SerializeObject(new { command });
+            byte[] messageSent = Encoding.ASCII.GetBytes(jsonCommand);
+            _socketWrapper.Send(messageSent);
+        }
+        private void DefaultMessage(string command)
+        {
+            SendData(command);
+
+            string jsonResponse = ReceiveJsonData();
+            Console.WriteLine(jsonResponse);
+        }
+
+        public void Stop(string command)
+        {
+            string jsonCommand = JsonConvert.SerializeObject(command);
+            byte[] messageSent = Encoding.ASCII.GetBytes(jsonCommand);
+
+            _socketWrapper.Send(messageSent);
+            continueListening = false;
+        }
+        
+        public void Logout(string command)
+        {
+            _userService.Logout();
+            isLoggedIn = false;
+            Console.WriteLine("You have been logged out.");
+        }
+
+        
+        
+        public string ReceiveJsonData()
+        {
+            byte[] buffer = new byte[1024];
+            int bytesReceived = _socketWrapper.Receive(buffer);
+            string jsonString = Encoding.ASCII.GetString(buffer, 0, bytesReceived);
+            dynamic response = JsonConvert.DeserializeObject(jsonString);
+            return response.command;
+        }
+        public void SendData(string data)
+        {
+            string jsonData = JsonConvert.SerializeObject(new { command = data });
+            byte[] messageSent = Encoding.ASCII.GetBytes(jsonData);
+            _socketWrapper.Send(messageSent);
+        }
+    }
+}
+
+===========================
+FILE: User.cs
+
+namespace Client;
+
+public class User
+{
+    public string Userame { get; set; }
+    public string Password { get; set; }
+    public string Role { get; set; }
+}
+
+
+=============================
+FILE: IMessageService.cs
+
+using System.Net.Sockets;
+
+namespace Server.Interfaces;
+
+public interface IMessageService
+{
+    void SetClientSocket(ISocketWrapper clientSocket);
+    void ReadMessage(string loggedInUser);
+    void SendMessage();
+}
+
+============================
+FILE: IServerInfoService.cs
+
+using System.Net.Sockets;
+
+namespace Server.Interfaces;
+
+public interface IServerInfoService
+{
+    void SetClientSocket(ISocketWrapper clientSocket);
+    void InfoCommand();
+    void HelpCommand();
+    void UptimeCommand();
+}
+
+
+============================
+FILE: ISocketWrapper.cs
+
+namespace Server.Interfaces;
+
+public interface ISocketWrapper
+{
+    void Send(byte[] buffer);
+    int Receive(byte[] buffer);
+
+}
+
+============================
+FILE: IUserService.cs
+
+namespace Server.Interfaces;
+
+public interface IUserService
+{
+    string AddUser(string username, string password);
+    (bool, string) Login(string username, string password);
+    string GetCurrentRole();
+    string GetLoggedInUser();
+    void Logout();
+    bool IsLoggedIn();
+    string DeleteUser(string username);
+    string GetUserInfo(string username);
+}
+
+
+=============================
+FILE: MessageService.cs
+
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Net.Sockets;
+using System.Text;
+using Newtonsoft.Json;
+using Server.Interfaces;
+
+namespace Server.Services
+{
+    public class MessageService : IMessageService
+    {
+        private ISocketWrapper _clientSocket;
+
+        public void SetClientSocket(ISocketWrapper clientSocket)
+        {
+            _clientSocket = clientSocket;
+        }
+
+        public void ReadMessage(string loggedInUser)
+        {
+            var file = $"{loggedInUser}_msg.txt";
+            string readMessage = null;
+            IEnumerable<string> lines = null;
+
+            if (File.Exists(file))
+            {
+                using (StreamReader reader = File.OpenText(file))
+                {
+                    if (!reader.EndOfStream)
+                    {
+                        readMessage = reader.ReadLine();
+                        lines = File.ReadAllLines(file);
+                    }
+                    else
+                    {
+                        readMessage = "none";
+                    }
+                }
+
+                if (!readMessage.Equals("none"))
+                {
+                    SendData(readMessage);
+                    File.WriteAllLines(file, lines.Skip(1));
+                }
+                else
+                {
+                    SendData("There are no new messages.");
+                }
+            }
+            else
+            {
+                SendData("There are no new messages.");
+            }
+        }
+        
+        public void SendMessage()
+        {
+            SendData("Enter username:");
+            string username = ReceiveData();
+            var file = $"{username}.json";
+            var msgFile = $"{username}_msg.txt";
+
+            if (File.Exists(file))
+            {
+                if (!File.Exists(msgFile))
+                {
+                    using (StreamWriter sw = new StreamWriter(msgFile)) { }
+                }
+
+                SendData("Type your message:");
+                string message = ReceiveData();
+
+                int count = File.ReadAllLines(msgFile).Length;
+
+                if (count < 5)
+                {
+                    File.AppendAllText(msgFile, message + "\n");
+                    SendData("Message has been sent.");
+                }
+                else
+                {
+                    SendData("Mailbox is full.");
+                }
+            }
+            else
+            {
+                SendData("User doesn't exist.");
+            }
+        }
+
+        private void SendData(string message)
+        {
+            string jsonMsg = JsonConvert.SerializeObject(message);
+            byte[] msg = Encoding.ASCII.GetBytes(jsonMsg);
+            _clientSocket.Send(msg);
+        }
+        
+        private string ReceiveData()
+        {
+            byte[] bytes = new byte[1024];
+            int numByte = _clientSocket.Receive(bytes);
+            string jsonString = Encoding.ASCII.GetString(bytes, 0, numByte);
+            dynamic jsonResponse = JsonConvert.DeserializeObject(jsonString);
+            return jsonResponse;
+        }
+    }
+}
+
+========================
+FILE: ServerInfoService.cs
+
+using System;
+using System.Net.Sockets;
+using System.Text;
+using Newtonsoft.Json;
+using Server.Interfaces;
+
+namespace Server.Services;
+
+public class ServerInfoService : IServerInfoService
+{
+    private readonly string serverVersion;
+    private readonly DateTime serverCreationDate;
+    private ISocketWrapper clientSocket;
+
+    public ServerInfoService(string version, DateTime creationDate)
+    {
+        serverVersion = version;
+        serverCreationDate = creationDate;
+    }
+
+    public void SetClientSocket(ISocketWrapper socket)
+    {
+        clientSocket = socket;
+    }
+
+    public void InfoCommand()
+    {
+        var message = $"Server version: {serverVersion}\nServer Creation Date: {serverCreationDate}";
+        SendData(message);
+    }
+
+    public void HelpCommand()
+    {
+        var message = $"Available commands:\n" +
+                      $"'add' - to add new user\n" +
+                      $"'help' - to get a list of available commands with their description\n" +
+                      $"'info' - to get info about server version, server creation date\n" +
+                      $"'msg' - to send a message to other user\n" +
+                      $"'read' - to read next message\n" +
+                      $"'uptime' - to check server uptime\n" +
+                      $"'user' - to print user data\n" +
+                      $"'stop' - to stop the server\n" +
+                      $"'logout' - to log out";
+        SendData(message);
+    }
+
+    public void UptimeCommand()
+    {
+        var serverCurrentDate = DateTime.Now;
+        var message = $"Server is up for {serverCurrentDate - serverCreationDate}";
+        SendData(message);
+    }
+    
+    public void SendData(string command)
+    {
+        string jsonData = JsonConvert.SerializeObject(new { command = command });
+        byte[] messageSent = Encoding.ASCII.GetBytes(jsonData);
+        clientSocket.Send(messageSent);
+    }
+}
+
+======================
+FILE: ServerSocket.cs
+
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Net;
+using System.Net.Sockets;
+using System.Text;
+using Newtonsoft.Json;
+using Server.Interfaces;
+
+namespace Server.Services
+{
+    public class ServerSocket
+    {
+        private ISocketWrapper clientSocket;
+        private readonly static string serverVersion = "0.0.3";
+        private readonly static DateTime serverCreationDate = DateTime.Now;
+        private bool stopped = false;
+        
+        private readonly IUserService userService;
+        private readonly IMessageService messageService;
+        private readonly IServerInfoService serverInfoService;
+
+        public ServerSocket(IUserService userService, 
+            IMessageService messageService, 
+            IServerInfoService serverInfoService)
+        {
+            this.userService = userService;
+            this.messageService = messageService;
+            this.serverInfoService = serverInfoService;
+
+        }
+        
+        static void Main(string[] args)
+        {
+            var userService = new UserService();
+            var messageService = new MessageService();
+            var serverInfoService = new ServerInfoService(serverVersion, serverCreationDate);
+            var serverSocket = new ServerSocket(userService, messageService, serverInfoService);
+            serverSocket.StartServer();
+        }
+
+        public void StartServer()
+        {
+            IPHostEntry ipHost = Dns.GetHostEntry(Dns.GetHostName());
+            IPAddress ipAddress = ipHost.AddressList[0];
+            IPEndPoint localEndPoint = new IPEndPoint(ipAddress, 11111);
+            Socket listener = new Socket(ipAddress.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
+            
+            try
+            {
+                listener.Bind(localEndPoint);
+                listener.Listen(10);
+
+                Console.WriteLine("Awaiting connection...");
+                Socket acceptedSocket = listener.Accept();
+                clientSocket = new SocketWrapper(acceptedSocket);
+                messageService.SetClientSocket(clientSocket);
+                serverInfoService.SetClientSocket(clientSocket);
+
+
+                Console.WriteLine("Connected");
+
+                while (!stopped)
+                {
+                    string firstData = ReceiveData();
+                    if (firstData == null)
+                        break;
+
+                    HandleFirstCommand(firstData.ToLower());
+
+                    while (userService.IsLoggedIn())
+                    {
+                        HandleLoggedInCommands();
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.ToString());
+            }
+            finally
+            {
+                listener.Close();
+            }
+        }
+        
+        private void HandleFirstCommand(string command)
+        {
+            //dynamic commandObj = JsonConvert.DeserializeObject(commandJson);
+            //string command = commandObj.command;
+            
+            switch (command)
+            {
+                case "login":
+                    Login();
+                    break;
+                case "add":
+                    AddUser();
+                    break;
+                default:
+                    break;
+            }
+        }
+
+        private void HandleLoggedInCommands()
+        {
+            SendData("Enter command (type \"help\" to check available commands):");
+            string data = ReceiveData()?.ToLower();
+            if (data == null)
+                return;
+
+            var commandActions = new Dictionary<string, Action>
+            {
+                { "add", AddUser },
+                { "user", PrintUserInfo },
+                { "help", serverInfoService.HelpCommand },
+                { "info", serverInfoService.InfoCommand },
+                { "uptime", serverInfoService.UptimeCommand },
+                { "stop", StopCommand },
+                { "logout", Logout },
+                { "delete", DeleteUser },
+                { "msg", () => messageService.SendMessage() },
+                { "read", () => messageService.ReadMessage(userService.GetLoggedInUser()) }
+            };
+
+            if (commandActions.ContainsKey(data))
+            {
+                commandActions[data].Invoke();
+            }
+            else
+            {
+                IncorrectCommand();
+            }
+        }
+        private void Login()
+        {
+            SendData("Enter username:");
+            string username = ReceiveData();
+            SendData("Enter password:");
+            string password = ReceiveData();
+
+            var (success, command) = userService.Login(username, password);
+            //SendData(JsonConvert.SerializeObject(new { command }));
+
+            if (success)
+            {
+                // Send a prompt for further commands
+                SendData(command);
+            }
+            else
+            {
+                SendData(command);
+            }
+        }
+
+        // public void SendData(string command)
+        // {
+        //     byte[] msg = Encoding.ASCII.GetBytes(command);
+        //     clientSocket.Send(msg);
+        // }
+        public void SendData(string command)
+        {
+            string jsonData = JsonConvert.SerializeObject(new { command = command });
+            byte[] messageSent = Encoding.ASCII.GetBytes(jsonData);
+            clientSocket.Send(messageSent);
+        }
+
+        public string ReceiveData()
+        {
+            byte[] bytes = new byte[1024];
+            int numByte = clientSocket.Receive(bytes);
+            string jsonString = Encoding.ASCII.GetString(bytes, 0, numByte);
+            dynamic jsonResponse = JsonConvert.DeserializeObject(jsonString);
+            return jsonResponse.command;
+        }
+
+
+        public void PrintUserInfo()
+        {
+            string loggedInUser = userService.GetLoggedInUser();
+            var role = userService.GetCurrentRole();
+            if (role.ToLower().Equals("admin"))
+            {
+                var msg = "approved";
+                SendData(msg);
+
+                var requestedUser = ReceiveData();
+                string userInfo = userService.GetUserInfo(requestedUser);
+                SendData(userInfo);
+            }
+            else
+            {
+                var msg = "not approved";
+                SendData(msg);
+                
+                var requestedUser = ReceiveData();
+                string userInfo = userService.GetUserInfo(requestedUser);
+                SendData(userInfo); 
+            }
+        }
+
+        private void Logout()
+        {
+            userService.Logout();
+            SendData("You have been logged out.");
+        }
+        private void AddUser()
+        {
+            SendData("Enter username:");
+            string username = ReceiveData();
+            SendData("Enter password:");
+            string password = ReceiveData();
+
+            string result = userService.AddUser(username, password);
+            SendData(result);
+        }
+        
+        private void DeleteUser()
+        {
+            SendData("Enter username to delete:");
+            string username = ReceiveData();
+
+            string result = userService.DeleteUser(username);
+            SendData(result);
+        }
+
+
+        private void IncorrectCommand()
+        {
+            SendData("Incorrect command. Type 'help' to get a list of available commands.");
+        }
+
+        private void StopCommand()
+        {
+            stopped = true;
+            SendData("Server stopping...");
+        }
+    }
+}
+
+========================
+FILE: SocketWrapper.cs
+
+using System.Net.Sockets;
+using Server.Interfaces;
+
+namespace Server.Services;
+
+public class SocketWrapper : ISocketWrapper
+{
+    private readonly Socket _socket;
+
+    public SocketWrapper(Socket socket)
+    {
+        _socket = socket;
+    }
+
+    public void Send(byte[] buffer)
+    {
+        _socket.Send(buffer);
+    }
+    public int Receive(byte[] buffer)
+    {
+        return _socket.Receive(buffer);
+    }
+}
+
+using System.IO;
+using Newtonsoft.Json;
+using Server.Interfaces;
+
+namespace Server.Services;
+public class UserService : IUserService
+{
+    private string currentRole;
+    private string loggedInUser;
+    private bool isLoggedIn;
+    public string AddUser(string username, string password)
+    {
+        if (File.Exists($"{username}.json"))
+        {
+            return $"User {username} already exists.";
+        }
+
+        User user = new User()
+        {
+            Userame = username,
+            Password = password,
+            Role = "user"
+        };
+
+        using (StreamWriter file = File.CreateText($"{username}.json"))
+        {
+            JsonSerializer serializer = new JsonSerializer();
+            serializer.Serialize(file, user);
+        }
+
+        return $"User {username} has been added.";
+    }
+    public (bool, string) Login(string username, string password)
+    {
+        var file = $"{username}.json";
+        if (File.Exists(file))
+        {
+            var fileRead = File.ReadAllText(file);
+            var singleUserData = JsonConvert.DeserializeObject<User>(fileRead);
+            string getPassword = singleUserData.Password;
+            currentRole = singleUserData.Role;
+
+            if (getPassword.Equals(password))
+            {
+                loggedInUser = singleUserData.Userame;
+                isLoggedIn = true;
+                return (true, "loggedIn");
+            }
+            else
+            {
+                return (false, "Incorrect password!");
+            }
+        }
+        else
+        {
+            return (false, "User doesn't exist.");
+        }
+    }
+    
+    public string DeleteUser(string username)
+    {
+        var file = $"{username}.json";
+        if (File.Exists(file))
+        {
+            File.Delete(file);
+            var msgFile = $"{username}_msg.txt";
+            if (File.Exists(msgFile))
+            {
+                File.Delete(msgFile);
+            }
+            return $"User {username} has been deleted.";
+        }
+        else
+        {
+            return $"User {username} does not exist.";
+        }
+    }
+    
+    public string GetUserInfo(string username)
+    {
+        var file = $"{username}.json";
+        if (File.Exists(file))
+        {
+            var fileRead = File.ReadAllText(file);
+            var singleUserData = JsonConvert.DeserializeObject<User>(fileRead);
+
+            return $"Username: {singleUserData.Userame}\nPassword: {singleUserData.Password}\nRole: {singleUserData.Role}";
+        }
+        else
+        {
+            return "User file not found.";
+        }
+    }
+    public string GetCurrentRole()
+    {
+        return currentRole;
+    }
+
+    public string GetLoggedInUser()
+    {
+        return loggedInUser;
+    }
+    public void Logout()
+    {
+        isLoggedIn = false;
+        loggedInUser = null;
+        currentRole = null;
+    }
+    public bool IsLoggedIn()
+    {
+        return isLoggedIn;
+    }
+}
+
+=========================
+FILE: User.cs
+
+using Newtonsoft.Json;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace Server
+{
+    public class User
+    {
+        [JsonProperty("Username")]
+        public string Userame { get; set; }
+        [JsonProperty("Password")]
+        public string Password { get; set; }
+        [JsonProperty("Role")]
+        public string Role { get; set; }
+    }
+}
+
+
+=============================
+FILE: MessageServiceTests.cs
+
+using System;
+using System.IO;
+using System.Text;
+using Moq;
+using Newtonsoft.Json;
+using Xunit;
+using Server.Interfaces;
+using Server.Services;
+
+namespace Server.Tests
+{
+    public class MessageServiceTests
+    {
+        
+        private readonly string _userFile;
+        private readonly string _messageFile;
+        private readonly Mock<ISocketWrapper> _mockSocket;
+        private readonly MessageService _service;
+
+        public MessageServiceTests()
+        {
+            _userFile = $"testUser.json";
+            _messageFile = $"testUser_msg.txt";
+            _mockSocket = new Mock<ISocketWrapper>();
+            _service = new MessageService();
+            _service.SetClientSocket(_mockSocket.Object);
+        }
+        
+        [Fact]
+        public void SendMessage_ShouldSendCorrectMessage()
+        {
+            // Arrange
+            var mockSocket = new Mock<ISocketWrapper>();
+            var service = new MessageService();
+            service.SetClientSocket(mockSocket.Object);
+
+            byte[] capturedMessage = null;
+
+            var receiveSequence = new Queue<string>(new[] { "testUser", "Test Message" });
+
+            mockSocket.Setup(socket => socket.Send(It.IsAny<byte[]>()))
+                .Callback<byte[]>(msg => capturedMessage = msg);
+
+            mockSocket.Setup(socket => socket.Receive(It.IsAny<byte[]>()))
+                .Returns((byte[] buffer) =>
+                {
+                    if (receiveSequence.Count == 0)
+                        throw new InvalidOperationException("No more data to receive.");
+
+                    var message = JsonConvert.SerializeObject(receiveSequence.Dequeue());
+                    var messageBytes = Encoding.ASCII.GetBytes(message);
+                    Array.Copy(messageBytes, buffer, messageBytes.Length);
+                    return messageBytes.Length;
+                });
+
+            File.WriteAllText("testUser.json", JsonConvert.SerializeObject(new { Userame = "testUser", Password = "password", Role = "user" }));
+            File.WriteAllText("testUser_msg.txt", string.Empty);
+
+            // Act
+            service.SendMessage();
+
+            // Assert
+            string expectedMessage = "Message has been sent.";
+            string jsonExpectedMessage = JsonConvert.SerializeObject(expectedMessage);
+            byte[] expectedMessageBytes = Encoding.ASCII.GetBytes(jsonExpectedMessage);
+
+            Assert.NotNull(capturedMessage);
+            Assert.Equal(Encoding.ASCII.GetString(expectedMessageBytes), Encoding.ASCII.GetString(capturedMessage));
+
+            File.Delete("testUser.json");
+            File.Delete("testUser_msg.txt");
+        }
+        
+        [Fact]
+        public void SendMessage_ShouldReturnUserDoesNotExist_WhenUserFileDoesNotExist()
+        {
+            // Arrange
+            var mockSocket = new Mock<ISocketWrapper>();
+            var service = new MessageService();
+            service.SetClientSocket(mockSocket.Object);
+
+            byte[] capturedMessage = null;
+
+            var receiveSequence = new Queue<string>(new[] { "nonexistentUser", "Test Message" });
+
+            mockSocket.Setup(socket => socket.Send(It.IsAny<byte[]>()))
+                .Callback<byte[]>(msg => capturedMessage = msg);
+
+            mockSocket.Setup(socket => socket.Receive(It.IsAny<byte[]>()))
+                .Returns((byte[] buffer) =>
+                {
+                    if (receiveSequence.Count == 0)
+                        throw new InvalidOperationException("No more data to receive.");
+
+                    var message = JsonConvert.SerializeObject(receiveSequence.Dequeue());
+                    var messageBytes = Encoding.ASCII.GetBytes(message);
+                    Array.Copy(messageBytes, buffer, messageBytes.Length);
+                    return messageBytes.Length;
+                });
+
+            // Act
+            service.SendMessage();
+
+            // Assert
+            string expectedMessage = "User doesn't exist.";
+            string jsonExpectedMessage = JsonConvert.SerializeObject(expectedMessage);
+            byte[] expectedMessageBytes = Encoding.ASCII.GetBytes(jsonExpectedMessage);
+
+            Assert.NotNull(capturedMessage);
+            Assert.Equal(Encoding.ASCII.GetString(expectedMessageBytes), Encoding.ASCII.GetString(capturedMessage));
+        }
+        
+        [Fact]
+        public void SendMessage_ShouldReturnMailboxFull_WhenMessageCountExceedsLimit()
+        {
+            // Arrange
+            var mockSocket = new Mock<ISocketWrapper>();
+            var service = new MessageService();
+            service.SetClientSocket(mockSocket.Object);
+
+            byte[] capturedMessage = null;
+
+            //Note: username should be different than in other tests, as it could fail the test ("User doesn't exist.")
+            //due to shared state.
+            var receiveSequence = new Queue<string>(new[] { "testUser123", "Test Message" });
+
+            mockSocket.Setup(socket => socket.Send(It.IsAny<byte[]>()))
+                .Callback<byte[]>(msg => capturedMessage = msg);
+
+            mockSocket.Setup(socket => socket.Receive(It.IsAny<byte[]>()))
+                .Returns((byte[] buffer) =>
+                {
+                    if (receiveSequence.Count == 0)
+                        throw new InvalidOperationException("No more data to receive.");
+
+                    var message = JsonConvert.SerializeObject(receiveSequence.Dequeue());
+                    var messageBytes = Encoding.ASCII.GetBytes(message);
+                    Array.Copy(messageBytes, buffer, messageBytes.Length);
+                    return messageBytes.Length;
+                });
+
+            File.WriteAllText("testUser123.json", JsonConvert.SerializeObject(new { Userame = "testUser123", Password = "password", Role = "user" }));
+            File.WriteAllLines("testUser123_msg.txt", new[] { "msg1", "msg2", "msg3", "msg4", "msg5" });
+
+            // Act
+            service.SendMessage();
+
+            // Assert
+            string expectedMessage = "Mailbox is full.";
+            string jsonExpectedMessage = JsonConvert.SerializeObject(expectedMessage);
+            byte[] expectedMessageBytes = Encoding.ASCII.GetBytes(jsonExpectedMessage);
+
+            Assert.NotNull(capturedMessage);
+            Assert.Equal(Encoding.ASCII.GetString(expectedMessageBytes), Encoding.ASCII.GetString(capturedMessage));
+
+            File.Delete("testUser123.json");
+            File.Delete("testUser123_msg.txt");
+        }
+        
+        [Fact]
+        public void ReadMessage_ShouldReturnMessage_WhenMessageIsAvailable()
+        {
+            // Arrange
+            string expectedMessage = "Test Message";
+            File.WriteAllText(_userFile, JsonConvert.SerializeObject(new { Userame = "testUser", Password = "password", Role = "user" }));
+            File.WriteAllLines(_messageFile, new[] { expectedMessage });
+
+            byte[] capturedMessage = null;
+            _mockSocket.Setup(socket => socket.Send(It.IsAny<byte[]>()))
+                .Callback<byte[]>(msg => capturedMessage = msg);
+
+            // Act
+            _service.ReadMessage("testUser");
+
+            // Assert
+            string jsonExpectedMessage = JsonConvert.SerializeObject(expectedMessage);
+            byte[] expectedMessageBytes = Encoding.ASCII.GetBytes(jsonExpectedMessage);
+
+            Assert.NotNull(capturedMessage);
+            Assert.Equal(Encoding.ASCII.GetString(expectedMessageBytes), Encoding.ASCII.GetString(capturedMessage));
+
+            string[] remainingMessages = File.ReadAllLines(_messageFile);
+            Assert.Empty(remainingMessages);
+        }
+        [Fact]
+        public void ReadMessage_ShouldReturnNoNewMessages_WhenFileIsEmpty()
+        {
+            // Arrange
+            File.WriteAllText(_userFile, JsonConvert.SerializeObject(new { Userame = "testUser", Password = "password", Role = "user" }));
+            File.WriteAllText(_messageFile, string.Empty);
+
+            byte[] capturedMessage = null;
+            _mockSocket.Setup(socket => socket.Send(It.IsAny<byte[]>()))
+                .Callback<byte[]>(msg => capturedMessage = msg);
+
+            // Act
+            _service.ReadMessage("testUser");
+
+            // Assert
+            string expectedMessage = "There are no new messages.";
+            string jsonExpectedMessage = JsonConvert.SerializeObject(expectedMessage);
+            byte[] expectedMessageBytes = Encoding.ASCII.GetBytes(jsonExpectedMessage);
+
+            Assert.NotNull(capturedMessage);
+            Assert.Equal(Encoding.ASCII.GetString(expectedMessageBytes), Encoding.ASCII.GetString(capturedMessage));
+        }
+        [Fact]
+        public void ReadMessage_ShouldReturnNoNewMessages_WhenMessageFileDoesNotExist()
+        {
+            // Arrange
+            File.WriteAllText(_userFile, JsonConvert.SerializeObject(new { Userame = "testUser0", Password = "password", Role = "user" }));
+
+            byte[] capturedMessage = null;
+            _mockSocket.Setup(socket => socket.Send(It.IsAny<byte[]>()))
+                .Callback<byte[]>(msg => capturedMessage = msg);
+
+            // Act
+            _service.ReadMessage("testUser0");
+
+            // Assert
+            string expectedMessage = "There are no new messages.";
+            string jsonExpectedMessage = JsonConvert.SerializeObject(expectedMessage);
+            byte[] expectedMessageBytes = Encoding.ASCII.GetBytes(jsonExpectedMessage);
+
+            Assert.NotNull(capturedMessage);
+            Assert.Equal(Encoding.ASCII.GetString(expectedMessageBytes), Encoding.ASCII.GetString(capturedMessage));
+        }
+
+        [Fact]
+        public void ReadMessage_ShouldReturnNoNewMessages_WhenUserFileDoesNotExist()
+        {
+            // Arrange
+            byte[] capturedMessage = null;
+            _mockSocket.Setup(socket => socket.Send(It.IsAny<byte[]>()))
+                .Callback<byte[]>(msg => capturedMessage = msg);
+
+            // Act
+            _service.ReadMessage("nonexistentUser");
+
+            // Assert
+            string expectedMessage = "There are no new messages.";
+            string jsonExpectedMessage = JsonConvert.SerializeObject(expectedMessage);
+            byte[] expectedMessageBytes = Encoding.ASCII.GetBytes(jsonExpectedMessage);
+
+            Assert.NotNull(capturedMessage);
+            Assert.Equal(Encoding.ASCII.GetString(expectedMessageBytes), Encoding.ASCII.GetString(capturedMessage));
+        }
+    }
+}
+
+
+======================
+FILE: ServerSocketTests.cs
+
+using Moq;
+using Xunit;
+using System.Net.Sockets;
+using System.Text;
+using Newtonsoft.Json;
+using System.Threading.Tasks;
+using Server.Interfaces;
+using Server.Services;
+
+namespace Server.Tests
+{
+    public class ServerSocketTests
+    {
+        private readonly UserService _userService;
+        private readonly Mock<ISocketWrapper> _mockSocketWrapper;
+        private readonly Mock<IUserService> _mockUserService;
+        private readonly ServerSocket _serverSocket;
+
+        public ServerSocketTests()
+        {
+            _userService = new UserService();
+            _mockSocketWrapper = new Mock<ISocketWrapper>();
+            _mockUserService = new Mock<IUserService>();
+
+            _serverSocket = new ServerSocket(
+                _mockUserService.Object,
+                new Mock<IMessageService>().Object,
+                new Mock<IServerInfoService>().Object
+            );
+
+            typeof(ServerSocket).GetField("clientSocket", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)
+                .SetValue(_serverSocket, _mockSocketWrapper.Object);
+        }
+        [Fact]
+        public void PrintUserInfo_ShouldSendApproved_WhenUserIsAdmin()
+        {
+            // Arrange
+            var username = "adminUser";
+            var userInfo = "User Info: adminUser";
+            var command = "approved";
+
+            _mockUserService.Setup(m => m.GetLoggedInUser()).Returns(username);
+            _mockUserService.Setup(m => m.GetCurrentRole()).Returns("admin");
+            _mockUserService.Setup(m => m.GetUserInfo(It.IsAny<string>())).Returns(userInfo);
+
+            _mockSocketWrapper.Setup(m => m.Receive(It.IsAny<byte[]>()))
+                .Callback<byte[]>(buffer =>
+                {
+                    var jsonString = JsonConvert.SerializeObject(new { command = username });
+                    var bytes = Encoding.ASCII.GetBytes(jsonString);
+                    bytes.CopyTo(buffer, 0);
+                })
+                .Returns((byte[] buffer) => Encoding.ASCII.GetBytes(JsonConvert.SerializeObject(new { command = username })).Length);
+
+            // Act
+            _serverSocket.PrintUserInfo();
+
+            // Assert
+            _mockSocketWrapper.Verify(m => m.Send(It.Is<byte[]>(b => Encoding.ASCII.GetString(b).Contains(command))), Times.Once);
+            _mockSocketWrapper.Verify(m => m.Send(It.Is<byte[]>(b => Encoding.ASCII.GetString(b).Contains(userInfo))), Times.Once);
+        }
+        [Fact]
+        public void PrintUserInfo_ShouldSendNotApproved_WhenUserIsNotAdmin()
+        {
+            // Arrange
+            var username = "regularUser";
+            var userInfo = "User Info: regularUser";
+            var command = "not approved";
+
+            _mockUserService.Setup(m => m.GetLoggedInUser()).Returns(username);
+            _mockUserService.Setup(m => m.GetCurrentRole()).Returns("user");
+            _mockUserService.Setup(m => m.GetUserInfo(It.IsAny<string>())).Returns(userInfo);
+
+            _mockSocketWrapper.Setup(m => m.Receive(It.IsAny<byte[]>()))
+                .Callback<byte[]>(buffer =>
+                {
+                    var jsonString = JsonConvert.SerializeObject(new { command = username });
+                    var bytes = Encoding.ASCII.GetBytes(jsonString);
+                    bytes.CopyTo(buffer, 0);
+                })
+                .Returns((byte[] buffer) => Encoding.ASCII.GetBytes(JsonConvert.SerializeObject(new { command = username })).Length);
+
+            // Act
+            _serverSocket.PrintUserInfo();
+
+            // Assert
+            _mockSocketWrapper.Verify(m => m.Send(It.Is<byte[]>(b => Encoding.ASCII.GetString(b).Contains(command))), Times.Once);
+            _mockSocketWrapper.Verify(m => m.Send(It.Is<byte[]>(b => Encoding.ASCII.GetString(b).Contains(userInfo))), Times.Once);
+        }
+
+        [Fact]
+        public void DeleteUser_ShouldDeleteExistingUser()
+        {
+            // Arrange
+            var username = "usertodelete";
+            var password = "password123";
+            var expectedFilePath = $"{username}.json";
+
+            _userService.AddUser(username, password);
+
+            // Act
+            var result = _userService.DeleteUser(username);
+
+            // Assert
+            Assert.Equal($"User {username} has been deleted.", result);
+            Assert.False(File.Exists(expectedFilePath));
+        }
+        
+        [Fact]
+        public void DeleteUser_ShouldNotDeleteNonExistingUser()
+        {
+            // Arrange
+            var username = "nonexistinguser";
+            var expectedFilePath = $"{username}.json";
+
+            // Act
+            var result = _userService.DeleteUser(username);
+
+            // Assert
+            Assert.Equal($"User {username} does not exist.", result);
+            Assert.False(File.Exists(expectedFilePath));
+        }
+        
+    }
+}
+
+=====================
+FILE: UserServiceTests.cs
+
+using System.IO;
+using Newtonsoft.Json;
+using Server.Services;
+using Xunit;
+
+namespace Server.Tests;
+public class UserServiceTests
+{
+    private readonly UserService _userService;
+
+    public UserServiceTests()
+    {
+        _userService = new UserService();
+    }
+    
+    [Fact]
+    public void AddUser_ShouldAddNewUser()
+    {
+        // Arrange
+        var username = "123aaa";
+        var password = "password123";
+        var expectedFilePath = $"{username}.json";
+
+        // Act
+        var result = _userService.AddUser(username, password);
+
+        // Assert
+        Assert.Equal($"User {username} has been added.", result);
+        Assert.True(File.Exists(expectedFilePath));
+            
+        if (File.Exists(expectedFilePath))
+        {
+            File.Delete(expectedFilePath);
+        }
+    }
+
+    [Fact]
+    public void AddUser_ShouldNotAddExistingUser()
+    {
+        // Arrange
+        var username = "existinguser";
+        var password = "password123";
+        var expectedFilePath = $"{username}.json";
+            
+        _userService.AddUser(username, password);
+
+        // Act
+        var result = _userService.AddUser(username, password);
+
+        // Assert
+        Assert.Equal($"User {username} already exists.", result);
+            
+        if (File.Exists(expectedFilePath))
+        {
+            File.Delete(expectedFilePath);
+        }
+    }
+
+    [Fact]
+    public void Login_ShouldReturnTrueAndLoggedIn_WhenCredentialsAreCorrect()
+    {
+        // Arrange
+        var username = "testuser";
+        var password = "password123";
+        var user = new User
+        {
+            Userame = username,
+            Password = password,
+            Role = "user"
+        };
+        File.WriteAllText($"{username}.json", JsonConvert.SerializeObject(user));
+
+        // Act
+        var result = _userService.Login(username, password);
+
+        // Assert
+        Assert.True(result.Item1);
+        Assert.Equal("loggedIn", result.Item2);
+        Assert.True(_userService.IsLoggedIn());
+        Assert.Equal(username, _userService.GetLoggedInUser());
+        Assert.Equal("user", _userService.GetCurrentRole());
+
+        File.Delete($"{username}.json");
+    }
+
+    [Fact]
+    public void Login_ShouldReturnFalseAndIncorrectPassword_WhenPasswordIsIncorrect()
+    {
+        // Arrange
+        var username = "testuser";
+        var password = "password123";
+        var incorrectPassword = "wrongpassword";
+        var user = new User
+        {
+            Userame = username,
+            Password = password,
+            Role = "user"
+        };
+        File.WriteAllText($"{username}.json", JsonConvert.SerializeObject(user));
+
+        // Act
+        var result = _userService.Login(username, incorrectPassword);
+
+        // Assert
+        Assert.False(result.Item1);
+        Assert.Equal("Incorrect password!", result.Item2);
+        Assert.False(_userService.IsLoggedIn());
+        Assert.Null(_userService.GetLoggedInUser());
+
+        File.Delete($"{username}.json");
+    }
+
+    [Fact]
+    public void Login_ShouldReturnFalseAndUserDoesNotExist_WhenUserDoesNotExist()
+    {
+        // Arrange
+        var username = "nonexistentuser";
+        var password = "password123";
+
+        // Act
+        var result = _userService.Login(username, password);
+
+        // Assert
+        Assert.False(result.Item1);
+        Assert.Equal("User doesn't exist.", result.Item2);
+        Assert.False(_userService.IsLoggedIn());
+        Assert.Null(_userService.GetLoggedInUser());
+    }
+    
+    [Fact]
+    public void GetUserInfo_ShouldReturnCorrectUserInfo_WhenUserExists()
+    {
+        // Arrange
+        var username = "testuser";
+        var password = "password123";
+        var role = "user";
+        var expectedUserInfo = $"Username: {username}\nPassword: {password}\nRole: {role}";
+        
+        var user = new User
+        {
+            Userame = username,
+            Password = password,
+            Role = role
+        };
+        File.WriteAllText($"{username}.json", JsonConvert.SerializeObject(user));
+
+        // Act
+        var result = _userService.GetUserInfo(username);
+
+        // Assert
+        Assert.Equal(expectedUserInfo, result);
+        
+        File.Delete($"{username}.json");
+    }
+
+    [Fact]
+    public void GetUserInfo_ShouldReturnErrorMessage_WhenUserDoesNotExist()
+    {
+        // Arrange
+        var username = "nonexistentuser";
+        var expectedMessage = "User file not found.";
+
+        // Act
+        var result = _userService.GetUserInfo(username);
+
+        // Assert
+        Assert.Equal(expectedMessage, result);
+    }
+}
+
+
+=============================
+FILE: ClientSocketTests.cs
+
+using System.Reflection;
+using System.Text;
+using Client.Interfaces;
+using Client.Services;
+using Moq;
+using Newtonsoft.Json;
+
+namespace Client.Test;
+
+public class ClientSocketTests
+    {
+        private readonly Mock<IUserService> _mockUserService;
+        private readonly Mock<ISocketWrapper> _mockSocketWrapper;
+        private readonly ClientSocket _clientSocket;
+        private readonly UserService _userService;
+
+
+        public ClientSocketTests()
+        {
+            _mockUserService = new Mock<IUserService>();
+            _mockSocketWrapper = new Mock<ISocketWrapper>();
+            _clientSocket = new ClientSocket(_mockSocketWrapper.Object, _mockUserService.Object, Mock.Of<IMessageService>());
+            _userService = new UserService(_mockSocketWrapper.Object);
+        }
+        [Fact]
+        public void Menu_ShouldTriggerLogin_WhenOption1IsSelected()
+        {
+            // Arrange
+            var input = new StringReader("1\n");
+            Console.SetIn(input);
+
+            // Act
+            _clientSocket.Menu();
+
+            // Assert
+            _mockUserService.Verify(us => us.Login(), Times.Once);
+            _mockSocketWrapper.Verify(sw => sw.Send(It.Is<byte[]>(b => Encoding.ASCII.GetString(b).Contains("login"))), Times.Once);
+        }
+        
+        [Fact]
+        public void Menu_ShouldDoNothing_WhenInvalidOptionIsSelected()
+        {
+            // Arrange
+            var input = new StringReader("invalid\n");
+            Console.SetIn(input);
+
+            // Act
+            _clientSocket.Menu();
+
+            // Assert
+            _mockUserService.Verify(us => us.Login(), Times.Never);
+            _mockUserService.Verify(us => us.AddUser(), Times.Never);
+            _mockSocketWrapper.Verify(sw => sw.Send(It.IsAny<byte[]>()), Times.Never);
+        }
+        
+        [Fact]
+        public void Logout_ShouldCallUserServiceLogout_AndSetIsLoggedInToFalse()
+        {
+            // Arrange
+            var command = "logout";
+
+            var consoleOutput = new StringWriter();
+            Console.SetOut(consoleOutput);
+
+            // Act
+            _clientSocket.Logout(command);
+
+            // Assert
+            _mockUserService.Verify(us => us.Logout(), Times.Once);
+            Assert.False(_clientSocket.IsLoggedIn);
+
+            var output = consoleOutput.ToString();
+            Assert.Contains("You have been logged out.", output);
+        }
+
+        [Fact]
+        public void Stop_ShouldSendSerializedCommandAndSetContinueListeningToFalse()
+        {
+            // Arrange
+            var command = "stop";
+            var jsonCommand = JsonConvert.SerializeObject(command);
+            var expectedBytes = Encoding.ASCII.GetBytes(jsonCommand);
+
+            // Act
+            _clientSocket.Stop(command);
+
+            // Assert
+            _mockSocketWrapper.Verify(sw => sw.Send(It.Is<byte[]>(b => b.SequenceEqual(expectedBytes))), Times.Once);
+
+            var continueListeningField = typeof(ClientSocket).GetField("continueListening", BindingFlags.NonPublic | BindingFlags.Instance);
+            var continueListeningValue = (bool)continueListeningField.GetValue(_clientSocket);
+            Assert.False(continueListeningValue);
+        }
+
+
+    }
+
+=====================
+FILE: MessageServiceTests.cs
+
+using System.Text;
+using Client.Interfaces;
+using Client.Services;
+using Moq;
+using Newtonsoft.Json;
+
+namespace Client.Test;
+
+public class MessageServiceTests
+{
+    [Fact]
+    public void SendMessage_ShouldPromptForUsernameAndMessage_AndSendThem()
+    {
+        // Arrange
+        var mockSocket = new Mock<ISocketWrapper>();
+        var messageService = new MessageService();
+        messageService.SetClientSocket(mockSocket.Object);
+
+        var receiveSequence = new Queue<string>(new[]
+        {
+            "Enter username:",
+            "Enter message:",
+            "Message has been sent."
+        });
+
+        mockSocket.Setup(socket => socket.Receive(It.IsAny<byte[]>()))
+            .Returns((byte[] buffer) =>
+            {
+                if (receiveSequence.Count == 0)
+                    throw new InvalidOperationException("No more data to receive.");
+
+                var message = JsonConvert.SerializeObject(receiveSequence.Dequeue());
+                var messageBytes = Encoding.ASCII.GetBytes(message);
+                Array.Copy(messageBytes, buffer, messageBytes.Length);
+                return messageBytes.Length;
+            });
+
+        var inputSequence = new Queue<string>(new[] { "testUser", "Test Message" });
+        Console.SetIn(new StringReader(string.Join(Environment.NewLine, inputSequence)));
+
+        // Act
+        messageService.SendMessage(mockSocket.Object);
+
+        // Assert
+        mockSocket.Verify(socket => socket.Send(It.IsAny<byte[]>()), Times.Exactly(3));
+        mockSocket.Verify(socket => socket.Receive(It.IsAny<byte[]>()), Times.Exactly(3));
+    }
+    
+    [Fact]
+    public void SendMessage_ShouldDisplayError_WhenUserDoesNotExist()
+    {
+        // Arrange
+        var mockSocket = new Mock<ISocketWrapper>();
+        var messageService = new MessageService();
+        messageService.SetClientSocket(mockSocket.Object);
+
+        var receiveSequence = new Queue<string>(new[]
+        {
+            "Enter username:",
+            "User doesn't exist."
+        });
+
+        mockSocket.Setup(socket => socket.Receive(It.IsAny<byte[]>()))
+            .Returns((byte[] buffer) =>
+            {
+                if (receiveSequence.Count == 0)
+                    return 0;
+
+                var message = JsonConvert.SerializeObject(receiveSequence.Dequeue());
+                var messageBytes = Encoding.ASCII.GetBytes(message);
+                Array.Copy(messageBytes, buffer, messageBytes.Length);
+                return messageBytes.Length;
+            });
+
+        var inputSequence = new Queue<string>(new[] { "nonexistentUser" });
+        Console.SetIn(new StringReader(string.Join(Environment.NewLine, inputSequence)));
+
+        // Act
+        messageService.SendMessage(mockSocket.Object);
+
+        // Assert
+        mockSocket.Verify(socket => socket.Send(It.IsAny<byte[]>()), Times.Exactly(3));
+        mockSocket.Verify(socket => socket.Receive(It.IsAny<byte[]>()), Times.Exactly(3));
+    }
+
+    [Fact]
+    public void SendMessage_ShouldDisplayError_WhenMessageBoxIsFull()
+    {
+        // Arrange
+        var mockSocket = new Mock<ISocketWrapper>();
+        var messageService = new MessageService();
+        messageService.SetClientSocket(mockSocket.Object);
+
+        var receiveSequence = new Queue<string>(new[]
+        {
+            "Enter username:",
+            "Mailbox is full."
+        });
+
+        mockSocket.Setup(socket => socket.Receive(It.IsAny<byte[]>()))
+            .Returns((byte[] buffer) =>
+            {
+                if (receiveSequence.Count == 0)
+                    return 0;
+
+                var message = JsonConvert.SerializeObject(receiveSequence.Dequeue());
+                var messageBytes = Encoding.ASCII.GetBytes(message);
+                Array.Copy(messageBytes, buffer, messageBytes.Length);
+                return messageBytes.Length;
+            });
+
+        var inputSequence = new Queue<string>(new[] { "testUser" });
+        Console.SetIn(new StringReader(string.Join(Environment.NewLine, inputSequence)));
+
+        // Act
+        messageService.SendMessage(mockSocket.Object);
+
+        // Assert
+        mockSocket.Verify(socket => socket.Send(It.IsAny<byte[]>()), Times.Exactly(3));
+        mockSocket.Verify(socket => socket.Receive(It.IsAny<byte[]>()), Times.Exactly(3));
+    }
+    
+    [Fact]
+    public void ReadMessage_ShouldDisplayMessage_WhenMessageIsAvailable()
+    {
+        // Arrange
+        var mockSocket = new Mock<ISocketWrapper>();
+        var messageService = new MessageService();
+        messageService.SetClientSocket(mockSocket.Object);
+
+        var receiveSequence = new Queue<string>(new[]
+        {
+            "Test Message"
+        });
+
+        mockSocket.Setup(socket => socket.Receive(It.IsAny<byte[]>()))
+            .Returns((byte[] buffer) =>
+            {
+                if (receiveSequence.Count == 0)
+                    return 0; 
+
+                var message = JsonConvert.SerializeObject(receiveSequence.Dequeue());
+                var messageBytes = Encoding.ASCII.GetBytes(message);
+                Array.Copy(messageBytes, buffer, messageBytes.Length);
+                return messageBytes.Length;
+            });
+
+        // Act
+        messageService.ReadMessage(mockSocket.Object);
+
+        // Assert
+        mockSocket.Verify(socket => socket.Send(It.IsAny<byte[]>()), Times.Once);
+        mockSocket.Verify(socket => socket.Receive(It.IsAny<byte[]>()), Times.Once);
+    }
+    
+    [Fact]
+    public void ReadMessage_ShouldDisplayNoNewMessages_WhenNoMessagesExist()
+    {
+        // Arrange
+        var mockSocket = new Mock<ISocketWrapper>();
+        var messageService = new MessageService();
+        messageService.SetClientSocket(mockSocket.Object);
+
+        var receiveSequence = new Queue<string>(new[]
+        {
+            "There are no new messages."
+        });
+
+        mockSocket.Setup(socket => socket.Receive(It.IsAny<byte[]>()))
+            .Returns((byte[] buffer) =>
+            {
+                if (receiveSequence.Count == 0)
+                    return 0;
+
+                var message = JsonConvert.SerializeObject(receiveSequence.Dequeue());
+                var messageBytes = Encoding.ASCII.GetBytes(message);
+                Array.Copy(messageBytes, buffer, messageBytes.Length);
+                return messageBytes.Length;
+            });
+
+        // Act
+        messageService.ReadMessage(mockSocket.Object);
+
+        // Assert
+        mockSocket.Verify(socket => socket.Send(It.IsAny<byte[]>()), Times.Once);
+        mockSocket.Verify(socket => socket.Receive(It.IsAny<byte[]>()), Times.Once);
+    }
+}
+
+========================
+FILE: UserServiceTests.cs
+
+using System.Text;
+using Client.Interfaces;
+using Client.Services;
+using Moq;
+using Newtonsoft.Json;
+
+namespace Client.Test;
+
+public class UserServiceTests
+{
+    private readonly Mock<ISocketWrapper> _mockSocketWrapper;
+    private readonly UserService _userService;
+
+    public UserServiceTests()
+    {
+        _mockSocketWrapper = new Mock<ISocketWrapper>();
+        _userService = new UserService(_mockSocketWrapper.Object);
+    }
+    
+    [Fact]
+    public void DeleteUser_ShouldSendSuccessMessage_WhenUserIsDeletedSuccessfully()
+    {
+        // Arrange
+        var username = "userToDelete";
+        var result = $"User {username} has been deleted.";
+        File.WriteAllText($"{username}.json", "{ \"Userame\": \"userToDelete\", \"Password\": \"password\", \"Role\": \"user\" }");
+
+        var inputSequence = new Queue<string>(new[] { username });
+        Console.SetIn(new StringReader(string.Join(Environment.NewLine, inputSequence)));
+
+        // Act
+        var deleteResult = _userService.DeleteUser(username);
+
+        // Assert
+        Assert.Equal(result, deleteResult);
+
+        if (File.Exists($"{username}.json"))
+        {
+            File.Delete($"{username}.json");
+        }
+    }
+    [Fact]
+    public void DeleteUser_ShouldSendFailureMessage_WhenUserDoesNotExist()
+    {
+        // Arrange
+        var username = "nonexistentuser";
+        var result = $"User {username} does not exist.";
+
+        var inputSequence = new Queue<string>(new[] { username });
+        Console.SetIn(new StringReader(string.Join(Environment.NewLine, inputSequence)));
+
+        // Act
+        var deleteResult = _userService.DeleteUser(username);
+
+        // Assert
+        Assert.Equal(result, deleteResult);
+    }
+    
+    
+    
+    [Fact]
+    public void GetUserInfo_ShouldReturnCorrectUserInfo_WhenUserExists()
+    {
+        // Arrange
+        var username = "testuser";
+        var password = "password123";
+        var role = "user";
+        var expectedUserInfo = $"Username: {username}\nPassword: {password}\nRole: {role}";
+        File.WriteAllText($"{username}.json", $"{{ \"Userame\": \"{username}\", \"Password\": \"{password}\", \"Role\": \"{role}\" }}");
+
+        // Act
+        var userInfo = _userService.GetUserInfo(username);
+
+        // Assert
+        Assert.Equal(expectedUserInfo, userInfo);
+
+        if (File.Exists($"{username}.json"))
+        {
+            File.Delete($"{username}.json");
+        }
+    }
+
+    [Fact]
+    public void GetUserInfo_ShouldReturnErrorMessage_WhenUserDoesNotExist()
+    {
+        // Arrange
+        var username = "nonexistentuser";
+        var expectedMessage = "User file not found.";
+
+        // Act
+        var userInfo = _userService.GetUserInfo(username);
+
+        // Assert
+        Assert.Equal(expectedMessage, userInfo);
+    }
+    
+    [Fact]
+    public void Login_ShouldReturnTrue_WhenCredentialsAreCorrect()
+    {
+        // Arrange
+        var username = "testuser";
+        var password = "password123";
+        var loginPrompt = JsonConvert.SerializeObject(new { command = "Enter username:" });
+        var passwordPrompt = JsonConvert.SerializeObject(new { command = "Enter password:" });
+        var loginResponse = JsonConvert.SerializeObject(new { command = "loggedIn" });
+
+        _mockSocketWrapper.Setup(m => m.Receive(It.IsAny<byte[]>()))
+            .Callback<byte[]>(buffer => Encoding.ASCII.GetBytes(loginPrompt).CopyTo(buffer, 0))
+            .Returns(loginPrompt.Length);
+
+        _mockSocketWrapper.Setup(m => m.Receive(It.IsAny<byte[]>()))
+            .Callback<byte[]>(buffer => Encoding.ASCII.GetBytes(passwordPrompt).CopyTo(buffer, 0))
+            .Returns(passwordPrompt.Length);
+
+        _mockSocketWrapper.Setup(m => m.Receive(It.IsAny<byte[]>()))
+            .Callback<byte[]>(buffer => Encoding.ASCII.GetBytes(loginResponse).CopyTo(buffer, 0))
+            .Returns(loginResponse.Length);
+        
+        var inputSequence = new Queue<string>(new[] { username, password });
+        Console.SetIn(new StringReader(string.Join(Environment.NewLine, inputSequence)));
+
+        // Act
+        var result = _userService.Login();
+
+        // Assert
+        Assert.True(result);
+        Assert.Equal(username, _userService.GetLoggedInUser());
+
+        _mockSocketWrapper.Verify(m => m.Send(It.IsAny<byte[]>()), Times.Exactly(2));
+    }
+    
+    [Fact]
+    public void Login_ShouldReturnFalse_WhenUserDoesNotExist()
+    {
+        // Arrange
+        var username = "nonexistentuser";
+        var password = "password123";
+        var loginPrompt = JsonConvert.SerializeObject(new { command = "Enter username:" });
+        var passwordPrompt = JsonConvert.SerializeObject(new { command = "Enter password:" });
+        var loginResponse = JsonConvert.SerializeObject(new { command = "User doesn't exist." });
+
+        _mockSocketWrapper.Setup(m => m.Receive(It.IsAny<byte[]>()))
+            .Callback<byte[]>(buffer => Encoding.ASCII.GetBytes(loginPrompt).CopyTo(buffer, 0))
+            .Returns(loginPrompt.Length);
+
+        _mockSocketWrapper.Setup(m => m.Receive(It.IsAny<byte[]>()))
+            .Callback<byte[]>(buffer => Encoding.ASCII.GetBytes(passwordPrompt).CopyTo(buffer, 0))
+            .Returns(passwordPrompt.Length);
+
+        _mockSocketWrapper.Setup(m => m.Receive(It.IsAny<byte[]>()))
+            .Callback<byte[]>(buffer => Encoding.ASCII.GetBytes(loginResponse).CopyTo(buffer, 0))
+            .Returns(loginResponse.Length);
+
+        var inputSequence = new Queue<string>(new[] { username, password });
+        Console.SetIn(new StringReader(string.Join(Environment.NewLine, inputSequence)));
+
+        // Act
+        var result = _userService.Login();
+
+        // Assert
+        Assert.False(result);
+        Assert.Null(_userService.GetLoggedInUser());
+
+        _mockSocketWrapper.Verify(m => m.Send(It.IsAny<byte[]>()), Times.Exactly(2));
+    }
+
+    
+    [Fact]
+    public void PrintUserInfo_ShouldPrintUserInfo_WhenApproved()
+    {
+        // Arrange
+        var command = "user";
+        var approvalResponse = JsonConvert.SerializeObject(new { command = "approved" });
+        var userInfoResponse = JsonConvert.SerializeObject(new { command = "User Info: testUser" });
+
+        _mockSocketWrapper.Setup(m => m.Receive(It.IsAny<byte[]>()))
+            .Callback<byte[]>(buffer => Encoding.ASCII.GetBytes(approvalResponse).CopyTo(buffer, 0))
+            .Returns(approvalResponse.Length);
+
+        _mockSocketWrapper.Setup(m => m.Receive(It.IsAny<byte[]>()))
+            .Callback<byte[]>(buffer => Encoding.ASCII.GetBytes(userInfoResponse).CopyTo(buffer, 0))
+            .Returns(userInfoResponse.Length);
+
+        var inputSequence = new Queue<string>(new[] { "testUser" });
+        Console.SetIn(new StringReader(string.Join(Environment.NewLine, inputSequence)));
+
+        // Act
+        _userService.PrintUserInfo(command);
+
+        // Assert
+        _mockSocketWrapper.Verify(m => m.Send(It.IsAny<byte[]>()), Times.Exactly(2));
+        _mockSocketWrapper.Verify(m => m.Receive(It.IsAny<byte[]>()), Times.Exactly(2));
+    }
+
+    [Fact]
+    public void PrintUserInfo_ShouldPrintCurrentUserInfo_WhenNotApproved()
+    {
+        // Arrange
+        var command = "user";
+        var notApprovedResponse = JsonConvert.SerializeObject(new { command = "not approved" });
+        var currentUserResponse = JsonConvert.SerializeObject(new { command = "User Info: currentUser" });
+
+        _mockSocketWrapper.Setup(m => m.Receive(It.IsAny<byte[]>()))
+            .Callback<byte[]>(buffer => Encoding.ASCII.GetBytes(notApprovedResponse).CopyTo(buffer, 0))
+            .Returns(notApprovedResponse.Length);
+
+        _mockSocketWrapper.Setup(m => m.Receive(It.IsAny<byte[]>()))
+            .Callback<byte[]>(buffer => Encoding.ASCII.GetBytes(currentUserResponse).CopyTo(buffer, 0))
+            .Returns(currentUserResponse.Length);
+
+        var inputSequence = new Queue<string>(new[] { "currentUser" });
+        Console.SetIn(new StringReader(string.Join(Environment.NewLine, inputSequence)));
+
+        // Act
+        _userService.PrintUserInfo(command);
+
+        // Assert
+        _mockSocketWrapper.Verify(m => m.Send(It.IsAny<byte[]>()), Times.Exactly(2));
+        _mockSocketWrapper.Verify(m => m.Receive(It.IsAny<byte[]>()), Times.Exactly(2));
+    }
+    
+    [Fact]
+    public void AddUser_ShouldReturnSuccessMessage_WhenUserIsAddedSuccessfully()
+    {
+        // Arrange
+        var usernamePrompt = JsonConvert.SerializeObject(new { command = "Enter username:" });
+        var passwordPrompt = JsonConvert.SerializeObject(new { command = "Enter password:" });
+        var addUserResponse = JsonConvert.SerializeObject(new { command = "User added successfully." });
+
+        var receiveCount = 0;
+        _mockSocketWrapper.Setup(m => m.Receive(It.IsAny<byte[]>()))
+            .Callback<byte[]>(buffer =>
+            {
+                string response = receiveCount switch
+                {
+                    0 => usernamePrompt,
+                    1 => passwordPrompt,
+                    2 => addUserResponse,
+                    _ => string.Empty
+                };
+
+                Encoding.ASCII.GetBytes(response).CopyTo(buffer, 0);
+                receiveCount++;
+            })
+            .Returns(() => receiveCount switch
+            {
+                1 => usernamePrompt.Length,
+                2 => passwordPrompt.Length,
+                3 => addUserResponse.Length,
+                _ => 0
+            });
+
+        var inputSequence = new Queue<string>(new[] { "newUser", "newPassword" });
+        Console.SetIn(new StringReader(string.Join(Environment.NewLine, inputSequence)));
+
+        // Act
+        var result = _userService.AddUser();
+
+        // Assert
+        Assert.Equal("User added successfully.", result);
+        _mockSocketWrapper.Verify(m => m.Send(It.IsAny<byte[]>()), Times.Exactly(2));
+    }
+    
+    [Fact]
+    public void AddUser_ShouldReturnFailureMessage_WhenUserAdditionFails()
+    {
+        // Arrange
+        var usernamePrompt = JsonConvert.SerializeObject(new { command = "Enter username:" });
+        var passwordPrompt = JsonConvert.SerializeObject(new { command = "Enter password:" });
+        var addUserResponse = JsonConvert.SerializeObject(new { command = "Failed to add user." });
+
+        var receiveCount = 0;
+        _mockSocketWrapper.Setup(m => m.Receive(It.IsAny<byte[]>()))
+            .Callback<byte[]>(buffer =>
+            {
+                string response = receiveCount switch
+                {
+                    0 => usernamePrompt,
+                    1 => passwordPrompt,
+                    2 => addUserResponse,
+                    _ => string.Empty
+                };
+
+                Encoding.ASCII.GetBytes(response).CopyTo(buffer, 0);
+                receiveCount++;
+            })
+            .Returns(() => receiveCount switch
+            {
+                1 => usernamePrompt.Length,
+                2 => passwordPrompt.Length,
+                3 => addUserResponse.Length,
+                _ => 0
+            });
+
+        var inputSequence = new Queue<string>(new[] { "newUser", "newPassword" });
+        Console.SetIn(new StringReader(string.Join(Environment.NewLine, inputSequence)));
+
+        // Act
+        var result = _userService.AddUser();
+
+        // Assert
+        Assert.Equal("Failed to add user.", result);
+        _mockSocketWrapper.Verify(m => m.Send(It.IsAny<byte[]>()), Times.Exactly(2));
+    }
+}
