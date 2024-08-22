@@ -232,8 +232,12 @@ namespace Server.Services
 
         private void StopCommand()
         {
-            stopped = true;
             SendData("Server stopping...");
+
+            stopped = true;
+
+            clientSocket.Close();
+            Console.WriteLine("Server socket closed, exiting application.");
         }
     }
 }

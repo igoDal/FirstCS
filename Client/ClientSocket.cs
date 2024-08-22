@@ -149,11 +149,21 @@ namespace Client
 
         public void Stop(string command)
         {
-            string jsonCommand = JsonConvert.SerializeObject(command);
+            string jsonCommand = JsonConvert.SerializeObject(new { command = command });
             byte[] messageSent = Encoding.ASCII.GetBytes(jsonCommand);
 
             _socketWrapper.Send(messageSent);
-            continueListening = false;
+
+            byte[] buffer = new byte[1024];
+            int numByte = _socketWrapper.Receive(buffer);
+            string response = Encoding.ASCII.GetString(buffer, 0, numByte);
+
+            if (response.Contains("Server stopping..."))
+            {
+                _socketWrapper.Close();
+                continueListening = false;
+                Console.WriteLine("Client socket closed, exiting application.");
+            }
         }
         
         public void Logout(string command)
