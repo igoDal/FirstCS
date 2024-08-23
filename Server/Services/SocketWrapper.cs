@@ -20,4 +20,9 @@ public class SocketWrapper : ISocketWrapper
     {
         return _socket.Receive(buffer);
     }
+    public void Close()
+    {
+        _socket.Shutdown(SocketShutdown.Both);
+        _socket.Close();
+    }
 }
